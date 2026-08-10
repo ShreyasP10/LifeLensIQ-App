@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LifeLens IQ</string>
+    <string name="app_tagline">Understand your time. Improve your life.</string>
+    <string name="tracking_notification_title">LifeLens IQ is tracking</string>
+    <string name="tracking_notification_text">Collecting your digital life events silently.</string>
+</resources>

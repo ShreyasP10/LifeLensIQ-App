@@ -1,0 +1,79 @@
+{
+  "timetableSchemaVersion": 1,
+  "source": "TE-B.pdf",
+  "class": "TE-Div:B",
+  "academicYear": "2026-2027 (SH 2026-ODD SEM)",
+  "personalization": {
+    "batch": "B1",
+    "elective": "IP",
+    "teHonorTaken": false,
+    "oeTaken": false
+  },
+  "days": [
+    {
+      "day": "MONDAY",
+      "slots": [
+        { "slotNo": 1, "start": "08:10", "end": "09:05", "subject": "IP", "subjectFull": "Internet Programming (IP)", "room": "201/202/203/204", "faculty": "AAG/RRK", "type": "LECTURE", "applicable": true },
+        { "slotNo": 2, "start": "09:05", "end": "10:00", "subject": "AISC", "subjectFull": "Artificial Intelligence & Soft Computing", "room": "203", "faculty": "MVC", "type": "LECTURE", "applicable": true },
+        { "slotNo": 3, "start": "10:20", "end": "11:15", "subject": "CN-Lab", "subjectFull": "Computer Network Lab", "room": "314/316/307", "faculty": "SHM-SMP", "type": "LAB", "applicable": true, "batch": "B1" },
+        { "slotNo": 4, "start": "11:15", "end": "12:10", "subject": "FREE", "subjectFull": "FREE PERIOD", "room": "", "faculty": "", "type": "FREE", "applicable": true },
+        { "slotNo": 5, "start": "12:50", "end": "13:45", "subject": "CN", "subjectFull": "Computer Network", "room": "203", "faculty": "SHM-SMP", "type": "LECTURE", "applicable": true },
+        { "slotNo": 6, "start": "13:45", "end": "14:40", "subject": "MDM", "subjectFull": "Multidisciplinary Minor", "room": "203", "faculty": "SVF", "type": "LECTURE", "applicable": true },
+        { "slotNo": 7, "start": "14:40", "end": "15:35", "subject": "INDUSTRIAL TRAINING", "subjectFull": "Industrial Training", "room": "", "faculty": "", "type": "TRAINING", "applicable": true },
+        { "slotNo": 8, "start": "15:35", "end": "16:30", "subject": "FREE", "subjectFull": "FREE (no TE-Honor)", "room": "", "faculty": "", "type": "FREE", "applicable": true }
+      ]
+    },
+    {
+      "day": "TUESDAY",
+      "slots": [
+        { "slotNo": 1, "start": "08:10", "end": "09:05", "subject": "SE-Lab", "subjectFull": "Software Engineering Lab", "room": "310/307/314", "faculty": "SSA", "type": "LAB", "applicable": true, "batch": "B1" },
+        { "slotNo": 2, "start": "09:05", "end": "10:00", "subject": "FREE", "subjectFull": "FREE PERIOD", "room": "", "faculty": "", "type": "FREE", "applicable": true },
+        { "slotNo": 3, "start": "10:20", "end": "11:15", "subject": "SE", "subjectFull": "Software Engineering", "room": "203", "faculty": "SSA", "type": "LECTURE", "applicable": true },
+        { "slotNo": 4, "start": "11:15", "end": "12:10", "subject": "MDM", "subjectFull": "Multidisciplinary Minor", "room": "203", "faculty": "SVF", "type": "LECTURE", "applicable": true },
+        { "slotNo": 5, "start": "12:50", "end": "13:45", "subject": "IKS-Lab", "subjectFull": "Indian Knowledge System Lab", "room": "203", "faculty": "SMS", "type": "LAB", "applicable": true },
+        { "slotNo": 6, "start": "13:45", "end": "14:40", "subject": "FREE", "subjectFull": "FREE PERIOD", "room": "", "faculty": "", "type": "FREE", "applicable": true },
+        { "slotNo": 7, "start": "14:40", "end": "15:35", "subject": "IP", "subjectFull": "Internet Programming (IP)", "room": "201/202/203/204", "faculty": "AAG/RRK", "type": "LECTURE", "applicable": true },
+        { "slotNo": 8, "start": "15:35", "end": "16:30", "subject": "FREE", "subjectFull": "FREE (no TE-Honor)", "room": "", "faculty": "", "type": "FREE", "applicable": true }
+      ]
+    },
+    {
+      "day": "WEDNESDAY",
+      "slots": [
+        { "slotNo": 1, "start": "08:10", "end": "09:05", "subject": "AISC-Lab", "subjectFull": "AISC Lab", "room": "311/314/312", "faculty": "MVC", "type": "LAB", "applicable": true, "batch": "B1" },
+        { "slotNo": 2, "start": "09:05", "end": "10:00", "subject": "FREE", "subjectFull": "FREE PERIOD", "room": "", "faculty": "", "type": "FREE", "applicable": true },
+        { "slotNo": 3, "start": "10:20", "end": "11:15", "subject": "SE", "subjectFull": "Software Engineering", "room": "203", "faculty": "SSA", "type": "LECTURE", "applicable": true },
+        { "slotNo": 4, "start": "11:15", "end": "12:10", "subject": "CN", "subjectFull": "Computer Network", "room": "203", "faculty": "SHM-SMP", "type": "LECTURE", "applicable": true },
+        { "slotNo": 5, "start": "12:50", "end": "13:45", "subject": "AISC", "subjectFull": "Artificial Intelligence & Soft Computing", "room": "203", "faculty": "MVC", "type": "LECTURE", "applicable": true },
+        { "slotNo": 6, "start": "13:45", "end": "14:40", "subject": "IKS", "subjectFull": "Indian Knowledge System", "room": "203", "faculty": "SMS", "type": "LECTURE", "applicable": true },
+        { "slotNo": 7, "start": "14:40", "end": "15:35", "subject": "MDM", "subjectFull": "Multidisciplinary Minor", "room": "203", "faculty": "SVF", "type": "LECTURE", "applicable": true },
+        { "slotNo": 8, "start": "15:35", "end": "16:30", "subject": "FREE", "subjectFull": "FREE (no TE-Honor)", "room": "", "faculty": "", "type": "FREE", "applicable": true }
+      ]
+    },
+    {
+      "day": "THURSDAY",
+      "slots": [
+        { "slotNo": 1, "start": "08:10", "end": "09:05", "subject": "FREE", "subjectFull": "FREE PERIOD", "room": "", "faculty": "", "type": "FREE", "applicable": true },
+        { "slotNo": 2, "start": "09:05", "end": "10:00", "subject": "CN", "subjectFull": "Computer Network", "room": "203", "faculty": "SHM-SMP", "type": "LECTURE", "applicable": true },
+        { "slotNo": 3, "start": "10:20", "end": "11:15", "subject": "AISC", "subjectFull": "Artificial Intelligence & Soft Computing", "room": "203", "faculty": "MVC", "type": "LECTURE", "applicable": true },
+        { "slotNo": 4, "start": "11:15", "end": "12:10", "subject": "SE", "subjectFull": "Software Engineering", "room": "203", "faculty": "SSA", "type": "LECTURE", "applicable": true },
+        { "slotNo": 5, "start": "12:50", "end": "13:45", "subject": "IKS", "subjectFull": "Indian Knowledge System", "room": "203", "faculty": "SMS", "type": "LECTURE", "applicable": true },
+        { "slotNo": 6, "start": "13:45", "end": "14:40", "subject": "DWM-Lab", "subjectFull": "DWM-Lab (TE-B Batch 1) — as printed in PDF", "room": "316", "faculty": "AJK", "type": "LAB", "applicable": true },
+        { "slotNo": 7, "start": "14:40", "end": "15:35", "subject": "FREE", "subjectFull": "FREE PERIOD", "room": "", "faculty": "", "type": "FREE", "applicable": true },
+        { "slotNo": 8, "start": "15:35", "end": "16:30", "subject": "FREE", "subjectFull": "FREE (no TE-Honor)", "room": "", "faculty": "", "type": "FREE", "applicable": true }
+      ]
+    },
+    {
+      "day": "FRIDAY",
+      "slots": [
+        { "slotNo": 1, "start": "08:10", "end": "09:05", "subject": "IP-Lab", "subjectFull": "IP-Lab (Batch 1)", "room": "310/312", "faculty": "AAG", "type": "LAB", "applicable": true, "batch": "Batch 1" },
+        { "slotNo": 2, "start": "09:05", "end": "10:00", "subject": "FREE", "subjectFull": "FREE PERIOD", "room": "", "faculty": "", "type": "FREE", "applicable": true },
+        { "slotNo": 3, "start": "10:20", "end": "11:15", "subject": "MDM-Lab", "subjectFull": "MDM Lab (Batch B1)", "room": "307/311/310", "faculty": "SVF", "type": "LAB", "applicable": true, "batch": "B1" },
+        { "slotNo": 4, "start": "11:15", "end": "12:10", "subject": "FREE", "subjectFull": "FREE PERIOD", "room": "", "faculty": "", "type": "FREE", "applicable": true },
+        { "slotNo": 5, "start": "12:50", "end": "13:45", "subject": "IP", "subjectFull": "Internet Programming (IP)", "room": "105/202/203/204", "faculty": "AAG/RRK", "type": "LECTURE", "applicable": true },
+        { "slotNo": 6, "start": "13:45", "end": "14:40", "subject": "FREE", "subjectFull": "FREE (OE — not taken)", "room": "", "faculty": "", "type": "FREE", "applicable": true },
+        { "slotNo": 7, "start": "14:40", "end": "15:35", "subject": "MENTORING", "subjectFull": "Mentoring / Training", "room": "", "faculty": "", "type": "MENTORING", "applicable": true },
+        { "slotNo": 8, "start": "15:35", "end": "16:30", "subject": "FREE", "subjectFull": "FREE (OE — not taken)", "room": "", "faculty": "", "type": "FREE", "applicable": true }
+      ]
+    }
+  ]
+}
