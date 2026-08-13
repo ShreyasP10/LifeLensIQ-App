@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             LifeLensIQTheme {
-                AppNavHost()
+                AppNavHost(initialRoute = intent.getStringExtra("route"))
             }
         }
     }

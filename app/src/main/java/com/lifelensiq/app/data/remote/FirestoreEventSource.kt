@@ -21,10 +21,14 @@ class FirestoreEventSource {
 
     private val db = FirebaseFirestore.getInstance()
 
-    /** Upload a batch (≤500) of events. Returns the count uploaded. */
-    suspend fun uploadBatch(events: List<EventEntity>): Int {
+    /**
+     * Upload a batch (≤500) of events under the CURRENT user's subtree.
+     * The collection path uses `userId` (the logged-in uid at sync time) —
+     * events captured before login carry userId="anonymous" and must still
+     * land under the real account, otherwise the security rules reject them.
+     */
+    suspend fun uploadBatch(userId: String, events: List<EventEntity>): Int {
         if (events.isEmpty()) return 0
-        val userId = events.first().userId
         val batch = db.batch()
         for (event in events) {
             val payload = JsonUtil.decodePayload(event.payloadJson)

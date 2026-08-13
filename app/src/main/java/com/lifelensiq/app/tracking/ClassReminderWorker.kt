@@ -78,9 +78,9 @@ class ClassReminderWorker(context: Context, params: WorkerParameters) :
     }
 
     companion object {
-        const val WORK_NAME = "lifeiq_class_reminders"
-        private const val CHANNEL_ID = "lifeiq_classes"
-        private const val PREFS = "lifeiq_class_reminders"
+        const val WORK_NAME = "lifelensiq_class_reminders"
+        private const val CHANNEL_ID = "lifelensiq_classes"
+        private const val PREFS = "lifelensiq_class_reminders"
 
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<ClassReminderWorker>(15, TimeUnit.MINUTES)

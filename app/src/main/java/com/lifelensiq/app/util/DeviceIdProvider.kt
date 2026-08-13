@@ -8,7 +8,7 @@ object DeviceIdProvider {
 
     fun get(context: android.content.Context): String {
         cached?.let { return it }
-        val prefs = context.getSharedPreferences("lifeiq", android.content.Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("lifelensiq", android.content.Context.MODE_PRIVATE)
         val existing = prefs.getString("device_id", null)
         if (existing != null) {
             cached = existing

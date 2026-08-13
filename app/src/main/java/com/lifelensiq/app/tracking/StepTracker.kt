@@ -24,6 +24,7 @@ class StepTracker(context: Context) {
     private var lastSteps: Int = 0
     private var registered = false
     private var emitterRef: EventEmitter? = null
+    private var scopeRef: CoroutineScope? = null
 
     fun hasPermission(context: Context): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) ==
@@ -35,7 +36,7 @@ class StepTracker(context: Context) {
             val delta = (cumulative - lastSteps).coerceAtLeast(0)
             if (lastSteps > 0 && delta > 0) {
                 val emitter = emitterRef ?: return
-                val scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+                val scope = scopeRef ?: return
                 scope.launch {
                     emitter.emit(
                         EventType.STEPS.id,
@@ -52,6 +53,7 @@ class StepTracker(context: Context) {
     fun start(scope: CoroutineScope, emitter: EventEmitter) {
         if (registered || sensor == null) return
         emitterRef = emitter
+        scopeRef = scope
         sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
         registered = true
     }
@@ -61,5 +63,7 @@ class StepTracker(context: Context) {
             sensorManager.unregisterListener(listener)
             registered = false
         }
+        emitterRef = null
+        scopeRef = null
     }
 }

@@ -44,7 +44,7 @@ class EventRepositoryImpl(
         if (events.isEmpty()) return SyncResult(0)
         return try {
             val userId = auth.userId ?: return SyncResult(0, failed = true, error = "Not logged in")
-            val uploaded = remote.uploadBatch(events)
+            val uploaded = remote.uploadBatch(userId, events)
             eventDao.markSynced(events.map { it.eventId })
             syncLogDao.insert(SyncLogEntity(syncedAt = System.currentTimeMillis(), batchSize = uploaded, success = true))
             SyncResult(uploaded)

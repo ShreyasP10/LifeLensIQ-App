@@ -1,6 +1,6 @@
 package com.lifelensiq.app.domain
 
-/** All event types captured by LifeIQ. Values are persisted verbatim. */
+/** All event types captured by LifeLens IQ. Values are persisted verbatim. */
 enum class EventType(val id: String) {
     APP_SESSION("APP_SESSION"),
     SCREEN_ON("SCREEN_ON"),

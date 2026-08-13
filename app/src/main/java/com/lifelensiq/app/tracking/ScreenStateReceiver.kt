@@ -13,12 +13,11 @@ import kotlinx.coroutines.launch
  * Receives screen on/off and unlock broadcasts, emits events, and feeds
  * the wake detector (first screen-on after >5h idle => WAKE_UP).
  */
-class ScreenStateReceiver : BroadcastReceiver() {
+class ScreenStateReceiver(private val scope: CoroutineScope) : BroadcastReceiver() {
 
     var onScreenOn: (suspend (EventEmitter) -> Unit)? = null
     var onScreenOff: (() -> Unit)? = null
 
-    private val scope = CoroutineScope(Dispatchers.IO)
     private var lastScreenOff: Long = System.currentTimeMillis()
 
     override fun onReceive(context: Context, intent: Intent) {

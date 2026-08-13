@@ -10,9 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class ChargeReceiver : BroadcastReceiver() {
-
-    private val scope = CoroutineScope(Dispatchers.IO)
+class ChargeReceiver(private val scope: CoroutineScope) : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val now = System.currentTimeMillis()

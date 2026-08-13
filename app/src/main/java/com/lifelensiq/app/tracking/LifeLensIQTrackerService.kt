@@ -29,8 +29,8 @@ class LifeLensIQTrackerService : Service() {
     private var appPollJob: Job? = null
     private var stepTracker: StepTracker? = null
 
-    private val screenReceiver = ScreenStateReceiver()
-    private val chargeReceiver = ChargeReceiver()
+    private val screenReceiver: ScreenStateReceiver by lazy { ScreenStateReceiver(scope) }
+    private val chargeReceiver: ChargeReceiver by lazy { ChargeReceiver(scope) }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -103,7 +103,7 @@ class LifeLensIQTrackerService : Service() {
     }
 
     companion object {
-        private const val CHANNEL_ID = "lifeiq_tracking"
+        private const val CHANNEL_ID = "lifelensiq_tracking"
         private const val NOTIFICATION_ID = 1001
 
         fun start(context: Context) {

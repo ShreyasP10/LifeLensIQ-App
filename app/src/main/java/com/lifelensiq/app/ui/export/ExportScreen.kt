@@ -83,7 +83,7 @@ fun ExportScreen(vm: ExportViewModel, onBack: () -> Unit) {
 
             Button(
                 onClick = {
-                    val name = "lifeiq_export_${System.currentTimeMillis()}.${state.format.label.lowercase()}"
+                    val name = "lifelensiq_export_${System.currentTimeMillis()}.${state.format.label.lowercase()}"
                     createDocument.launch(name)
                 },
                 enabled = !state.isExporting,

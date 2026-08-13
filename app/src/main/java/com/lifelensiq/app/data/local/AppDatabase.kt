@@ -25,7 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "lifeiq.db"
+                    "lifelensiq.db"
                 )
                     // Prototype only — v1.0 will define real migrations.
                     .fallbackToDestructiveMigration()

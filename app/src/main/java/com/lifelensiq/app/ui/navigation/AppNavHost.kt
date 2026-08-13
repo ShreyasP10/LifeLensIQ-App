@@ -63,15 +63,21 @@ private val TABS = listOf(
 )
 
 @Composable
-fun AppNavHost(navController: NavHostController = rememberNavController()) {
+fun AppNavHost(
+    navController: NavHostController = rememberNavController(),
+    initialRoute: String? = null
+) {
 
     val authRepo = ServiceLocator.authRepository()
     val authState by authRepo.state.collectAsState()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    LaunchedEffect(authState) {
-        if (authState is AuthState.LoggedIn && navController.currentBackStackEntry?.destination?.route != Routes.HOME) {
-            navController.navigate(Routes.HOME) { popUpTo(0) }
+    LaunchedEffect(authState, initialRoute) {
+        if (authState is AuthState.LoggedIn) {
+            val target = initialRoute?.takeIf { it in TAB_ROUTES } ?: Routes.HOME
+            if (navController.currentBackStackEntry?.destination?.route != target) {
+                navController.navigate(target) { popUpTo(0) }
+            }
         } else if (authState is AuthState.LoggedOut && navController.currentBackStackEntry?.destination?.route != Routes.LOGIN) {
             navController.navigate(Routes.LOGIN) { popUpTo(0) }
         }

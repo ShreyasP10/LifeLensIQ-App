@@ -52,7 +52,7 @@ class SyncWorker(context: Context, params: WorkerParameters) :
 
     companion object {
         const val MAX_BATCH = 500
-        const val WORK_NAME = "lifeiq_sync"
+        const val WORK_NAME = "lifelensiq_sync"
     }
 }
 
@@ -80,6 +80,12 @@ object SyncScheduler {
             .setConstraints(constraints)
             .build()
         WorkManager.getInstance(context)
-            .enqueueUniqueWork(SyncWorker.WORK_NAME, ExistingWorkPolicy.REPLACE, request)
+            .enqueueUniqueWork(
+                SyncWorker.WORK_NAME,
+                // APPEND (not REPLACE) — REPLACE would cancel the periodic
+                // chain created by schedule() and kill background sync.
+                ExistingWorkPolicy.APPEND,
+                request
+            )
     }
 }
