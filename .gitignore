@@ -1,6 +1,20 @@
-# Personal timetable files (not for the repo)
-TE-B.pdf
-TE-B_Timetable_Detailed.html
+# Gradle
+.gradle/
+build/
+local.properties
+
+# IDE
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Firebase secrets
+google-services.json
 
 # Kotlin session state
 .kotlin/
+
+# Misc
+.DS_Store

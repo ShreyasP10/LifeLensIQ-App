@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Every user only accesses their own subtree.
+    // Serves BOTH clients: the Android app (users/{uid}/events,
+    // users/{uid}/timetable) and the web dashboard + extension
+    // (users/{uid}/events, users/{uid}/settings, users/{uid}/timetable).
+    match /users/{uid}/{doc=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Leaderboard: anyone may read; only the owner writes (opt-in publish).
+    match /leaderboard/{uid} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Everything else is denied (default).
+  }
+}

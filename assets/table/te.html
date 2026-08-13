@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TE-Div:B Time Table 2026-27 (SH 2026-ODD SEM) — B1 + IP Personal Schedule</title>
+<style>
+  :root {
+    --ip: #1a73e8; --dwm: #7b1fa2; --cg: #00897b; --lab: #fbc02d; --free: #eceff1;
+    --training: #e53935; --breakc: #cfd8dc; --se: #5e35b1; --cn: #00838f;
+    --aisc: #43a047; --mdm: #ef6c00; --iks: #6d4c41;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: #f4f6f8; color: #212121; margin: 0; padding: 24px;
+  }
+  .page { max-width: 1280px; margin: 0 auto; }
+  h1, h2, h3 { margin: 0 0 6px 0; }
+  .header {
+    background: linear-gradient(135deg, #1a237e, #283593);
+    color: #fff; border-radius: 12px; padding: 20px 26px; margin-bottom: 20px;
+    box-shadow: 0 4px 14px rgba(26,35,126,.25);
+  }
+  .header .dept { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .85; }
+  .header h1 { font-size: 24px; }
+  .header .sub { font-size: 14px; opacity: .95; margin-top: 4px; }
+  .cards { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
+  .card {
+    flex: 1 1 230px; background: #fff; border-radius: 10px; padding: 14px 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08); border-left: 5px solid #1a73e8;
+  }
+  .card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #546e7a; margin-bottom: 8px; }
+  .card p { font-size: 14px; margin: 2px 0; }
+  .card .val { font-weight: 700; color: #1a237e; }
+  .section {
+    background: #fff; border-radius: 12px; padding: 22px 26px; margin-bottom: 22px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.07);
+  }
+  .section h2 {
+    font-size: 18px; color: #1a237e; border-bottom: 2px solid #e3e8ef;
+    padding-bottom: 10px; margin-bottom: 16px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border: 1px solid #cfd8dc; padding: 7px 9px; text-align: left; vertical-align: middle; }
+  th { background: #eceff1; color: #263238; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+  td.time { white-space: nowrap; font-weight: 600; color: #37474f; }
+  td.day { font-weight: 700; color: #1a237e; white-space: nowrap; }
+  td.free, td.freeper { background: var(--free); color: #78909c; }
+  td.breakrow { background: var(--breakc); color: #546e7a; font-weight: 600; text-align: center; font-size: 12px; }
+  .badge {
+    display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px;
+    font-weight: 700; color: #fff; letter-spacing: .5px;
+  }
+  .b-ip   { background: var(--ip); }
+  .b-lab  { background: var(--lab); color: #263238; }
+  .b-train{ background: var(--training); }
+  .b-se   { background: var(--se); }
+  .b-cn   { background: var(--cn); }
+  .b-aisc { background: var(--aisc); }
+  .b-mdm  { background: var(--mdm); }
+  .b-iks  { background: var(--iks); }
+  .b-misc { background: #455a64; }
+  .b-note { background: #90a4ae; }
+  .legend-note { margin-top: 14px; font-size: 12.5px; color: #546e7a; line-height: 1.6; }
+  .legend-note b { color: #263238; }
+  .faculty { font-size: 12px; color: #546e7a; }
+  .room { font-size: 12px; color: #1565c0; font-weight: 600; white-space: nowrap; }
+  .gist { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 6px; }
+  .gist-item { background: #f8fafc; border: 1px solid #e3e8ef; border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+  .gist-item b { color: #1a237e; }
+  .footer { text-align: center; color: #90a4ae; font-size: 12px; margin: 8px 0 24px; }
+  .hl { background: #e3f2fd; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ================= HEADER ================= -->
+  <div class="header">
+    <div class="dept">Department of Computer Engineering</div>
+    <h1>Class Time Table — TE Division B</h1>
+    <div class="sub">Academic Year 2026-2027 (SH 2026-ODD SEM) &nbsp;•&nbsp; Class Advisor: Prof. Sayali Poojari (w.e.f. 20 July 2026)</div>
+  </div>
+
+  <!-- ================= PROFILE CARDS ================= -->
+  <div class="cards">
+    <div class="card"><h3>Division / Batch</h3><p class="val">TE-Div: B &nbsp;|&nbsp; Batch: B1</p></div>
+    <div class="card"><h3>Program Elective - 1</h3><p class="val">Internet Programming (IP)</p><p>Prof. Ashwini A. Gaikwad / Dr. Reshma R. Koli (AAG/RRK)</p></div>
+    <div class="card"><h3>TE-Honor</h3><p class="val">Not taken</p><p>All TE-Honor slots become FREE for you.</p></div>
+    <div class="card"><h3>Open Elective (OE)</h3><p class="val">Not taken</p><p>All OE slots (Friday) become FREE for you.</p></div>
+  </div>
+
+  <!-- ================= FULL TIMETABLE (EXACT) ================= -->
+  <div class="section">
+    <h2>1) Complete TE-Div:B Timetable — exactly as printed in TE-B.pdf</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Day</th><th>Slot</th><th>Time</th>
+          <th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="day">1</td><td>1</td><td class="time">8:10–9:05</td>
+          <td class="hl"><span class="badge b-ip">IP</span> / DWM / CG<br><span class="room">201/202/203/204</span><br><span class="faculty">AAG/AJK/TCK/BSG</span></td>
+          <td><span class="badge b-lab">LAB</span> SE(B1)/MDM(B2)/CN(B3)<br><span class="room">310/307/314</span><br><span class="faculty">SSA/MPK/SMP-SHM</span></td>
+          <td><span class="badge b-lab">LAB</span> AISC(B1)/CN(B2)/AISC(B3)<br><span class="room">311/314/312</span><br><span class="faculty">MVC/SMP-SHM/SSD</span></td>
+          <td class="free">FREE</td>
+          <td class="hl"><span class="badge b-lab">LAB</span> IP-Lab(Batch 1)/CG-Lab(Batch 1)<br><span class="room">310/312</span><br><span class="faculty">AAG/BSG</span></td>
+        </tr>
+        <tr>
+          <td class="day">2</td><td>2</td><td class="time">9:05–10:00</td>
+          <td><span class="badge b-aisc">AISC</span><br><span class="room">203</span><br><span class="faculty">MVC</span></td>
+          <td class="free">FREE</td>
+          <td class="free">FREE</td>
+          <td><span class="badge b-cn">CN</span><br><span class="room">203</span><br><span class="faculty">SHM-SMP</span></td>
+          <td class="free">FREE</td>
+        </tr>
+        <tr>
+          <td class="breakrow" colspan="8">BREAK 1 &nbsp;•&nbsp; 10:00 – 10:20</td>
+        </tr>
+        <tr>
+          <td class="day">3</td><td>3</td><td class="time">10:20–11:15</td>
+          <td><span class="badge b-lab">LAB</span> CN-Lab(B1)/SE-Lab(B2)/MDM-Lab(A3)<br><span class="room">314/316/307</span><br><span class="faculty">SHM-SMP/SSA/MPK</span></td>
+          <td><span class="badge b-se">SE</span><br><span class="room">203</span><br><span class="faculty">SSA</span></td>
+          <td><span class="badge b-se">SE</span><br><span class="room">203</span><br><span class="faculty">SSA</span></td>
+          <td><span class="badge b-aisc">AISC</span><br><span class="room">203</span><br><span class="faculty">MVC</span></td>
+          <td><span class="badge b-lab">LAB</span> MDM-Lab(B1)/AISC-Lab(B2)/SE-Lab(B3)<br><span class="room">307/311/310</span><br><span class="faculty">SVF/MVC/SSA</span></td>
+        </tr>
+        <tr>
+          <td class="day">4</td><td>4</td><td class="time">11:15–12:10</td>
+          <td class="free">FREE</td>
+          <td><span class="badge b-mdm">MDM</span><br><span class="room">203</span><br><span class="faculty">SVF</span></td>
+          <td><span class="badge b-cn">CN</span><br><span class="room">203</span><br><span class="faculty">SHM-SMP</span></td>
+          <td><span class="badge b-se">SE</span><br><span class="room">203</span><br><span class="faculty">SSA</span></td>
+          <td class="free">FREE</td>
+        </tr>
+        <tr>
+          <td class="breakrow" colspan="8">LUNCH BREAK &nbsp;•&nbsp; 12:10 – 12:50</td>
+        </tr>
+        <tr>
+          <td class="day">5</td><td>5</td><td class="time">12:50–1:45</td>
+          <td><span class="badge b-cn">CN</span><br><span class="room">203</span><br><span class="faculty">SHM-SMP</span></td>
+          <td><span class="badge b-lab">LAB</span> IKS-Lab(B1/B2/B3)<br><span class="room">203</span><br><span class="faculty">SMS</span></td>
+          <td><span class="badge b-aisc">AISC</span><br><span class="room">203</span><br><span class="faculty">MVC</span></td>
+          <td><span class="badge b-iks">IKS</span><br><span class="room">203</span><br><span class="faculty">SMS</span></td>
+          <td class="hl"><span class="badge b-ip">IP</span> / DWM / CG<br><span class="room">105/202/203/204</span><br><span class="faculty">AAG/AJK/TCK/BSG</span></td>
+        </tr>
+        <tr>
+          <td class="day">6</td><td>6</td><td class="time">1:45–2:40</td>
+          <td><span class="badge b-mdm">MDM</span><br><span class="room">203</span><br><span class="faculty">SVF</span></td>
+          <td class="free">FREE</td>
+          <td><span class="badge b-iks">IKS</span><br><span class="room">203</span><br><span class="faculty">SMS</span></td>
+          <td><span class="badge b-lab">LAB</span> DWM-Lab(TE-B-Batch 1)<br><span class="room">316</span><br><span class="faculty">AJK</span></td>
+          <td><span class="badge b-misc">OE</span> (Open Elective)<br><span class="room">203</span></td>
+        </tr>
+        <tr>
+          <td class="day">7</td><td>7</td><td class="time">2:40–3:35</td>
+          <td><span class="badge b-train">Industrial Training</span></td>
+          <td class="hl"><span class="badge b-ip">IP</span> / DWM / CG<br><span class="room">201/202/203/204</span><br><span class="faculty">AAG/AJK/TCK/BSG</span></td>
+          <td><span class="badge b-mdm">MDM</span><br><span class="room">203</span><br><span class="faculty">SVF</span></td>
+          <td class="free">FREE</td>
+          <td><span class="badge b-train">MENTORING</span></td>
+        </tr>
+        <tr>
+          <td class="day">8</td><td>8</td><td class="time">3:35–4:30</td>
+          <td class="free">FREE</td>
+          <td><span class="badge b-note">TE-Honor</span> AIML/DS / CS (3:35–5:00)<br><span class="room">413-414/210/213-214</span></td>
+          <td><span class="badge b-note">TE-Honor</span> AIML/DS / CS (3:35–4:30)<br><span class="room">413-414/210/213-214</span></td>
+          <td><span class="badge b-note">TE-Honor</span> AIML/DS / CS (3:35–5:00)<br><span class="room">413-414/210/213-214</span></td>
+          <td><span class="badge b-misc">OE</span> (Open Elective)<br><span class="room">203</span></td>
+        </tr>
+        <tr>
+          <td class="breakrow" colspan="8">Friday — annotated merged cell below the OE / Mentoring row: INDUSTRIAL TRAINING</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ================= PERSONALIZED TIMETABLE ================= -->
+  <div class="section">
+    <h2>2) YOUR Personal Timetable — Batch B1 • Elective: IP • No TE-Honor • No OE</h2>
+    <table>
+      <thead>
+        <tr><th>Day</th><th>Time</th><th>Subject</th><th>Room</th><th>Faculty</th><th>Type</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="day" rowspan="8">MONDAY</td><td class="time">8:10–9:05</td><td><span class="badge b-ip">IP</span> Internet Programming (PE-1)</td><td class="room">201/202/203/204</td><td class="faculty">AAG/RRK</td><td>Lecture</td></tr>
+        <tr><td class="time">9:05–10:00</td><td><span class="badge b-aisc">AISC</span> Artificial Intelligence &amp; Soft Computing</td><td class="room">203</td><td class="faculty">MVC</td><td>Lecture</td></tr>
+        <tr><td class="breakrow" colspan="5">BREAK 1 — 10:00–10:20</td></tr>
+        <tr><td class="time">10:20–11:15</td><td><span class="badge b-lab">LAB</span> CN-Lab (Batch B1)</td><td class="room">314/316/307</td><td class="faculty">SHM-SMP</td><td>Lab</td></tr>
+        <tr><td class="time">11:15–12:10</td><td class="freeper">FREE PERIOD</td><td>—</td><td>—</td><td>Free</td></tr>
+        <tr><td class="breakrow" colspan="5">LUNCH — 12:10–12:50</td></tr>
+        <tr><td class="time">12:50–1:45</td><td><span class="badge b-cn">CN</span> Computer Network</td><td class="room">203</td><td class="faculty">SHM-SMP</td><td>Lecture</td></tr>
+        <tr><td class="time">1:45–2:40</td><td><span class="badge b-mdm">MDM</span> Multidisciplinary Minor</td><td class="room">203</td><td class="faculty">SVF</td><td>Lecture</td></tr>
+        <tr><td class="day"></td><td class="time">2:40–3:35</td><td><span class="badge b-train">INDUSTRIAL TRAINING</span></td><td>—</td><td>—</td><td>Training</td></tr>
+        <tr><td class="day"></td><td class="time">3:35–4:30</td><td class="freeper">FREE (no TE-Honor for you)</td><td>—</td><td>—</td><td>Free</td></tr>
+
+        <tr><td class="day" rowspan="8">TUESDAY</td><td class="time">8:10–9:05</td><td><span class="badge b-lab">LAB</span> SE-Lab (Batch B1)</td><td class="room">310/307/314</td><td class="faculty">SSA</td><td>Lab</td></tr>
+        <tr><td class="time">9:05–10:00</td><td class="freeper">FREE PERIOD</td><td>—</td><td>—</td><td>Free</td></tr>
+        <tr><td class="breakrow" colspan="5">BREAK 1 — 10:00–10:20</td></tr>
+        <tr><td class="time">10:20–11:15</td><td><span class="badge b-se">SE</span> Software Engineering</td><td class="room">203</td><td class="faculty">SSA</td><td>Lecture</td></tr>
+        <tr><td class="time">11:15–12:10</td><td><span class="badge b-mdm">MDM</span> Multidisciplinary Minor</td><td class="room">203</td><td class="faculty">SVF</td><td>Lecture</td></tr>
+        <tr><td class="breakrow" colspan="5">LUNCH — 12:10–12:50</td></tr>
+        <tr><td class="time">12:50–1:45</td><td><span class="badge b-lab">LAB</span> IKS-Lab (B1/B2/B3)</td><td class="room">203</td><td class="faculty">SMS</td><td>Lab</td></tr>
+        <tr><td class="time">1:45–2:40</td><td class="freeper">FREE PERIOD</td><td>—</td><td>—</td><td>Free</td></tr>
+        <tr><td class="day"></td><td class="time">2:40–3:35</td><td><span class="badge b-ip">IP</span> Internet Programming (PE-1)</td><td class="room">201/202/203/204</td><td class="faculty">AAG/RRK</td><td>Lecture</td></tr>
+        <tr><td class="day"></td><td class="time">3:35–4:30</td><td class="freeper">FREE (no TE-Honor for you)</td><td>—</td><td>—</td><td>Free</td></tr>
+
+        <tr><td class="day" rowspan="8">WEDNESDAY</td><td class="time">8:10–9:05</td><td><span class="badge b-lab">LAB</span> AISC-Lab (Batch B1)</td><td class="room">311/314/312</td><td class="faculty">MVC</td><td>Lab</td></tr>
+        <tr><td class="time">9:05–10:00</td><td class="freeper">FREE PERIOD</td><td>—</td><td>—</td><td>Free</td></tr>
+        <tr><td class="breakrow" colspan="5">BREAK 1 — 10:00–10:20</td></tr>
+        <tr><td class="time">10:20–11:15</td><td><span class="badge b-se">SE</span> Software Engineering</td><td class="room">203</td><td class="faculty">SSA</td><td>Lecture</td></tr>
+        <tr><td class="time">11:15–12:10</td><td><span class="badge b-cn">CN</span> Computer Network</td><td class="room">203</td><td class="faculty">SHM-SMP</td><td>Lecture</td></tr>
+        <tr><td class="breakrow" colspan="5">LUNCH — 12:10–12:50</td></tr>
+        <tr><td class="time">12:50–1:45</td><td><span class="badge b-aisc">AISC</span> Artificial Intelligence &amp; Soft Computing</td><td class="room">203</td><td class="faculty">MVC</td><td>Lecture</td></tr>
+        <tr><td class="time">1:45–2:40</td><td><span class="badge b-iks">IKS</span> Indian Knowledge System</td><td class="room">203</td><td class="faculty">SMS</td><td>Lecture</td></tr>
+        <tr><td class="day"></td><td class="time">2:40–3:35</td><td><span class="badge b-mdm">MDM</span> Multidisciplinary Minor</td><td class="room">203</td><td class="faculty">SVF</td><td>Lecture</td></tr>
+        <tr><td class="day"></td><td class="time">3:35–4:30</td><td class="freeper">FREE (no TE-Honor for you)</td><td>—</td><td>—</td><td>Free</td></tr>
+
+        <tr><td class="day" rowspan="8">THURSDAY</td><td class="time">8:10–9:05</td><td class="freeper">FREE PERIOD</td><td>—</td><td>—</td><td>Free</td></tr>
+        <tr><td class="time">9:05–10:00</td><td><span class="badge b-cn">CN</span> Computer Network</td><td class="room">203</td><td class="faculty">SHM-SMP</td><td>Lecture</td></tr>
+        <tr><td class="breakrow" colspan="5">BREAK 1 — 10:00–10:20</td></tr>
+        <tr><td class="time">10:20–11:15</td><td><span class="badge b-aisc">AISC</span> Artificial Intelligence &amp; Soft Computing</td><td class="room">203</td><td class="faculty">MVC</td><td>Lecture</td></tr>
+        <tr><td class="time">11:15–12:10</td><td><span class="badge b-se">SE</span> Software Engineering</td><td class="room">203</td><td class="faculty">SSA</td><td>Lecture</td></tr>
+        <tr><td class="breakrow" colspan="5">LUNCH — 12:10–12:50</td></tr>
+        <tr><td class="time">12:50–1:45</td><td><span class="badge b-iks">IKS</span> Indian Knowledge System</td><td class="room">203</td><td class="faculty">SMS</td><td>Lecture</td></tr>
+        <tr><td class="time">1:45–2:40</td><td><span class="badge b-lab">LAB</span> DWM-Lab (TE-B Batch 1) *</td><td class="room">316</td><td class="faculty">AJK</td><td>Lab</td></tr>
+        <tr><td class="day"></td><td class="time">2:40–3:35</td><td class="freeper">FREE PERIOD</td><td>—</td><td>—</td><td>Free</td></tr>
+        <tr><td class="day"></td><td class="time">3:35–4:30</td><td class="freeper">FREE (no TE-Honor for you)</td><td>—</td><td>—</td><td>Free</td></tr>
+
+        <tr><td class="day" rowspan="8">FRIDAY</td><td class="time">8:10–9:05</td><td><span class="badge b-lab">LAB</span> IP-Lab (Batch 1) — your elective lab</td><td class="room">310/312</td><td class="faculty">AAG</td><td>Lab</td></tr>
+        <tr><td class="time">9:05–10:00</td><td class="freeper">FREE PERIOD</td><td>—</td><td>—</td><td>Free</td></tr>
+        <tr><td class="breakrow" colspan="5">BREAK 1 — 10:00–10:20</td></tr>
+        <tr><td class="time">10:20–11:15</td><td><span class="badge b-lab">LAB</span> MDM-Lab (Batch B1)</td><td class="room">307/311/310</td><td class="faculty">SVF</td><td>Lab</td></tr>
+        <tr><td class="time">11:15–12:10</td><td class="freeper">FREE PERIOD</td><td>—</td><td>—</td><td>Free</td></tr>
+        <tr><td class="breakrow" colspan="5">LUNCH — 12:10–12:50</td></tr>
+        <tr><td class="time">12:50–1:45</td><td><span class="badge b-ip">IP</span> Internet Programming (PE-1)</td><td class="room">105/202/203/204</td><td class="faculty">AAG/RRK</td><td>Lecture</td></tr>
+        <tr><td class="time">1:45–2:40</td><td class="freeper">FREE (OE — you don't take it)</td><td>—</td><td>—</td><td>Free</td></tr>
+        <tr><td class="day"></td><td class="time">2:40–3:35</td><td><span class="badge b-train">MENTORING / TRAINING</span> — as you noted, Friday has training/mentoring</td><td>—</td><td>—</td><td>Mentoring</td></tr>
+        <tr><td class="day"></td><td class="time">3:35–4:30</td><td class="freeper">FREE (OE — you don't take it)</td><td>—</td><td>—</td><td>Free</td></tr>
+        <tr><td class="day"></td><td class="time">all afternoon</td><td><span class="badge b-train">INDUSTRIAL TRAINING</span> — annotated merged cell printed under Friday's OE/Mentoring row</td><td>—</td><td>—</td><td>Note</td></tr>
+      </tbody>
+    </table>
+
+    <div class="legend-note">
+      <b>* Thursday 1:45–2:40</b> — the PDF prints <b>DWM-Lab (TE-B-Batch 1)</b> at room 316 (faculty AJK) for Batch 1.
+      Please confirm with your class advisor / DWM or IP faculty whether IP students attend this lab or use it as a free period.
+    </div>
+  </div>
+
+  <!-- ================= LEGEND ================= -->
+  <div class="section">
+    <h2>3) Faculty &amp; Subject Legend (exactly as printed)</h2>
+    <table>
+      <thead><tr><th>Abbreviation</th><th>Faculty</th><th>Subject</th><th>Batch</th></tr></thead>
+      <tbody>
+        <tr><td><b>SSA</b></td><td>Dr. Sukhada S. Aloni</td><td>Software Engineering (SE)</td><td>B1</td></tr>
+        <tr><td><b>SHM</b></td><td>Dr. Sachin H. Malave</td><td>Computer Network (CN)</td><td>B2</td></tr>
+        <tr><td><b>MVC</b></td><td>PROF. Manasi V. Chouk / PROF Suchita S. Dange</td><td>Artificial Intelligence &amp; Soft Computing (AISC)</td><td>B3</td></tr>
+        <tr><td><b>SVF/MPK</b></td><td>PROF. Selvin V.F. / Dr. Mamta P. Kurvey</td><td>Multidisciplinary Minor (MDM)</td><td>—</td></tr>
+        <tr><td><b>AAG/RRK</b></td><td>PROF Ashwini A. Gaikwad / Dr. Reshma R. Koli</td><td>Program Elective - 1 (Internet Programming) (IP) &nbsp;⬅ <b>YOUR SUBJECT</b></td><td>—</td></tr>
+        <tr><td><b>AJK/TCK</b></td><td>PROF. Archana J. Kotangale / Dr. Tanvi Kapdi</td><td>Program Elective- 1 (Data Warehousing &amp; Mining) (DWM)</td><td>—</td></tr>
+        <tr><td><b>BSG</b></td><td>Dr. Babita S. Gawate</td><td>Program Elective- 1 (Computer Graphics) (CG)</td><td>—</td></tr>
+        <tr><td><b>SMS</b></td><td>PROF. Sambhaji M. Shirsat</td><td>Indian Knowledge System (IKS)</td><td>—</td></tr>
+        <tr><td><b>AJK</b></td><td>PROF. Archana J. Kotangale</td><td>Quantitative Aptitude</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="legend-note">
+      Time Table Co-Ordinator: <b>Prof. Vishakha Chaudhari / Dr. Reshma Koli</b> &nbsp;•&nbsp; HOD, Computer Engineering: <b>Dr. Sachin Malave</b><br>
+      Class Advisor: <b>Prof. Sayali Poojari</b> (w.e.f. 20 July 2026) &nbsp;•&nbsp; Academic Year <b>2026-2027</b> (SH 2026-ODD SEM)
+    </p>
+  </div>
+
+  <!-- ================= WEEK AT A GLANCE ================= -->
+  <div class="section">
+    <h2>4) Your Week at a Glance (B1 + IP)</h2>
+    <div class="gist">
+      <div class="gist-item"><b>IP (Program Elective-1):</b> Mon 8:10–9:05, Tue 2:40–3:35, Fri 12:50–1:45 + <b>IP-Lab (Batch 1)</b> Fri 8:10–9:05</div>
+      <div class="gist-item"><b>Core lectures:</b> AISC (Mon, Wed, Thu), CN (Mon, Wed, Thu), SE (Tue, Wed, Thu), MDM (Mon, Tue, Wed), IKS (Wed, Thu)</div>
+      <div class="gist-item"><b>Your labs (B1):</b> CN-Lab (Mon 10:20), SE-Lab (Tue 8:10), AISC-Lab (Wed 8:10), MDM-Lab (Fri 10:20), IP-Lab (Fri 8:10), DWM-Lab* (Thu 1:45)</div>
+      <div class="gist-item"><b>Training / Mentoring:</b> Mon 2:40–3:35 = Industrial Training &nbsp;•&nbsp; Fri 2:40–3:35 = MENTORING (Friday afternoon also carries an "Industrial Training" annotation cell)</div>
+      <div class="gist-item"><b>Free periods (yours):</b> Mon 11:15 &amp; 3:35, Tue 9:05 &amp; 1:45 &amp; 3:35, Wed 9:05 &amp; 3:35, Thu 8:10 &amp; 2:40 &amp; 3:35, Fri 9:05 &amp; 11:15 &amp; 1:45 (OE) &amp; 3:35 (OE)</div>
+      <div class="gist-item"><b>Not applicable to you:</b> TE-Honor AIML/DS /CS (Tue/Wed/Thu 3:35–5:00) and OE slots (Fri 1:45 &amp; 3:35) — both FREE for you</div>
+    </div>
+  </div>
+
+  <div class="footer">Data fetched directly from TE-B.pdf (Department of Computer Engineering, 2026-2027, SH 2026-ODD SEM). Generated with fetch_timetable.py.</div>
+</div>
+</body>
+</html>
