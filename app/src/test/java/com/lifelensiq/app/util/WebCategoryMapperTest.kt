@@ -56,6 +56,11 @@ class WebCategoryMapperTest {
     }
 
     @Test
+    fun `short video events map to Short-form Video`() {
+        assertEquals("Short-form Video", WebCategoryMapper.categoryFor(EventType.SHORT_VIDEO.id, "com.instagram.android"))
+    }
+
+    @Test
     fun `device events are neutral Utilities`() {
         assertEquals("Utilities", WebCategoryMapper.categoryFor(EventType.SCREEN_ON.id, null))
         assertEquals("Utilities", WebCategoryMapper.categoryFor(EventType.STEPS.id, null))

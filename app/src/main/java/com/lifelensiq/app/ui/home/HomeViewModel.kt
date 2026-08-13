@@ -28,6 +28,7 @@ data class HomeUiState(
     val screenTimeMinutesToday: Long = 0,
     val attendanceMarkedToday: Int = 0,
     val classesToday: Int = 0,
+    val shortsToday: Int = 0,
     val usageAccessGranted: Boolean = false,
     val timetableImported: Boolean = false
 )
@@ -73,12 +74,19 @@ class HomeViewModel(
             val appEvents = eventsToday.filter { it.eventType == EventType.APP_SESSION.id }
             val screenMs = appEvents.sumOf { sessionDuration(it) }
             val attendanceEvents = eventsToday.filter { it.eventType == EventType.CLASS_ATTENDANCE.id }
+            val shortsViews = eventsToday
+                .filter { it.eventType == EventType.SHORT_VIDEO.id }
+                .sumOf { event ->
+                    (JsonUtil.decodePayload(event.payloadJson)["views"] as? kotlinx.serialization.json.JsonPrimitive)
+                        ?.content?.toIntOrNull() ?: 0
+                }
             _uiState.update {
                 it.copy(
                     studyMinutesToday = studyMs / 60_000,
                     appSessionsToday = appEvents.size,
                     screenTimeMinutesToday = screenMs / 60_000,
-                    attendanceMarkedToday = attendanceEvents.size
+                    attendanceMarkedToday = attendanceEvents.size,
+                    shortsToday = shortsViews
                 )
             }
         }

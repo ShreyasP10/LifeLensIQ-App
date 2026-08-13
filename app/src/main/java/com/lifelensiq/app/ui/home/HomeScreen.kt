@@ -88,6 +88,9 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatCard("Study", "${state.studyMinutesToday}m", Modifier.weight(1f))
                 StatCard("Screen", "${state.screenTimeMinutesToday}m", Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatCard("Shorts/Reels", state.shortsToday.toString(), Modifier.weight(1f))
                 StatCard("Pending sync", state.pendingSync.toString(), Modifier.weight(1f))
             }
 

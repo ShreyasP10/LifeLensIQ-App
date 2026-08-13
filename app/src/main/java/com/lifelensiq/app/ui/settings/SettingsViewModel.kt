@@ -16,6 +16,7 @@ import com.lifelensiq.app.sync.SyncScheduler
 import com.lifelensiq.app.timetable.TimetableImporter
 import com.lifelensiq.app.tracking.ClassReminderWorker
 import com.lifelensiq.app.tracking.LifeLensIQTrackerService
+import com.lifelensiq.app.tracking.ShortsReelsDetector
 import com.lifelensiq.app.util.PermissionUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,7 @@ import java.io.File
 data class SettingsUiState(
     val usageAccessGranted: Boolean = false,
     val stepsPermissionGranted: Boolean = false,
+    val shortsDetectorEnabled: Boolean = false,
     val message: String? = null,
     val busy: Boolean = false
 )
@@ -45,6 +47,7 @@ class SettingsViewModel(
     init {
         refreshUsageAccess()
         refreshStepsPermission()
+        refreshShortsDetector()
     }
 
     fun refreshUsageAccess() {
@@ -63,6 +66,26 @@ class SettingsViewModel(
             context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
         } catch (_: ActivityNotFoundException) {
             _uiState.update { it.copy(message = "Usage access settings not available on this device.") }
+        }
+    }
+
+    fun refreshShortsDetector() {
+        val context = ServiceLocator.context()
+        val component = android.content.ComponentName(context, ShortsReelsDetector::class.java)
+        val enabledServices = runCatching {
+            android.provider.Settings.Secure.getString(
+                context.contentResolver,
+                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: ""
+        }.getOrDefault("")
+        _uiState.update { it.copy(shortsDetectorEnabled = enabledServices.contains(component.flattenToString())) }
+    }
+
+    fun openAccessibilitySettings(context: Context) {
+        try {
+            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        } catch (_: ActivityNotFoundException) {
+            _uiState.update { it.copy(message = "Accessibility settings not available on this device.") }
         }
     }
 

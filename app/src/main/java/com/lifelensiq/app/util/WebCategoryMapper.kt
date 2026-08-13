@@ -55,6 +55,7 @@ object WebCategoryMapper {
     )
 
     fun categoryFor(eventType: String, packageName: String?): String = when {
+        eventType == EventType.SHORT_VIDEO.id -> SHORT_FORM
         eventType == EventType.STUDY_SESSION.id || eventType == EventType.CLASS_ATTENDANCE.id -> STUDY
         eventType == EventType.APP_SESSION.id -> categoryForPackage(packageName)
         eventType in neutralTypes -> UTILITIES

@@ -4,4 +4,6 @@
     <string name="app_tagline">Understand your time. Improve your life.</string>
     <string name="tracking_notification_title">LifeLens IQ is tracking</string>
     <string name="tracking_notification_text">Collecting your digital life events silently.</string>
+    <string name="accessibility_service_label">LifeLens IQ — Reels &amp; Shorts detector</string>
+    <string name="accessibility_service_description">Counts Instagram Reels, Facebook Reels and YouTube Shorts you view, so your short-form video time appears in your LifeLens IQ dashboard. No content is read or stored — only counts.</string>
 </resources>

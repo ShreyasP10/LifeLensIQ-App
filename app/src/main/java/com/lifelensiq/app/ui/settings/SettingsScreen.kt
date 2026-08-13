@@ -200,6 +200,36 @@ fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit) {
 
             Card {
                 Column(Modifier.padding(16.dp)) {
+                    Text("Reels & Shorts", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Counts Instagram/Facebook Reels and YouTube Shorts viewed (accessibility heuristic). " +
+                            if (state.shortsDetectorEnabled) "ENABLED" else "DISABLED — enable it to track short-form video on your phone.",
+                        color = if (state.shortsDetectorEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { vm.openAccessibilitySettings(context) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (state.shortsDetectorEnabled) "Manage in Accessibility settings" else "Enable Reels & Shorts detection")
+                    }
+                    OutlinedButton(
+                        onClick = { vm.refreshShortsDetector() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.Refresh, contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Re-check status")
+                    }
+                }
+            }
+
+            Card {
+                Column(Modifier.padding(16.dp)) {
                     Text("Sync", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
