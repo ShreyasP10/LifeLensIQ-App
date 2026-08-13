@@ -13,6 +13,9 @@ captures/
 # Firebase secrets
 google-services.json
 
+# Signing keystore (private — never commit)
+keystore/
+
 # Kotlin session state
 .kotlin/
 
