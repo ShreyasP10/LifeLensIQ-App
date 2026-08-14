@@ -29,6 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.lifelensiq.app.di.ServiceLocator
 import com.lifelensiq.app.domain.repository.AuthState
+import kotlinx.coroutines.delay
 import com.lifelensiq.app.ui.activity.ActivityScreen
 import com.lifelensiq.app.ui.activity.ActivityViewModel
 import com.lifelensiq.app.ui.activity.CategoryDetailScreen
@@ -86,21 +87,18 @@ fun AppNavHost(
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route
 
-    LaunchedEffect(authState, initialRoute, currentEntry) {
-        val entry = currentEntry ?: return@LaunchedEffect
-        when (authState) {
-            is AuthState.LoggedIn -> {
-                val target = initialRoute?.takeIf { it in TAB_ROUTES } ?: Routes.HOME
-                if (entry.destination.route != target) {
-                    navController.navigate(target) { popUpTo(0) }
-                }
-            }
-            is AuthState.LoggedOut -> {
-                if (entry.destination.route != Routes.LOGIN) {
-                    navController.navigate(Routes.LOGIN) { popUpTo(0) }
-                }
-            }
-            else -> Unit
+    LaunchedEffect(authState, initialRoute) {
+        val target = when (authState) {
+            is AuthState.LoggedIn -> initialRoute?.takeIf { it in TAB_ROUTES } ?: Routes.HOME
+            is AuthState.LoggedOut -> Routes.LOGIN
+            else -> return@LaunchedEffect
+        }
+        // Cold start: the NavHost graph may not be attached yet — wait for it.
+        while (navController.graph.findNode(target) == null) {
+            delay(50)
+        }
+        if (navController.currentBackStackEntry?.destination?.route != target) {
+            navController.navigate(target) { popUpTo(0) }
         }
     }
 
