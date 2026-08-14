@@ -1,6 +1,8 @@
 package com.lifelensiq.app.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,8 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
@@ -31,13 +35,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.lifelensiq.app.ui.navigation.Routes
+import com.lifelensiq.app.ui.theme.CategoryColors
+import java.time.LocalDate
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +54,9 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
     val state by vm.uiState.collectAsState()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("LifeLens IQ") }) }
+        topBar = {
+            TopAppBar(title = { Text("LifeLens IQ") })
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -55,12 +66,15 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(greeting(), style = MaterialTheme.typography.titleLarge)
-            Text(
-                "Understand your time. Improve your life.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Header
+            Column {
+                Text(greeting(), style = MaterialTheme.typography.titleLarge)
+                Text(
+                    LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy")),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             if (!state.usageAccessGranted) {
                 BannerCard(
@@ -86,12 +100,63 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard("Study", "${state.studyMinutesToday}m", Modifier.weight(1f))
-                StatCard("Screen", "${state.screenTimeMinutesToday}m", Modifier.weight(1f))
+                StatCard(
+                    "Study",
+                    "${state.studyMinutesToday}m",
+                    CategoryColors.STUDY,
+                    Modifier.weight(1f)
+                )
+                StatCard(
+                    "Screen",
+                    "${state.screenTimeMinutesToday}m",
+                    CategoryColors.PRODUCTIVITY,
+                    Modifier.weight(1f)
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard("Shorts/Reels", state.shortsToday.toString(), Modifier.weight(1f))
-                StatCard("Pending sync", state.pendingSync.toString(), Modifier.weight(1f))
+                StatCard(
+                    "Shorts/Reels",
+                    state.shortsToday.toString(),
+                    CategoryColors.SHORT_FORM,
+                    Modifier.weight(1f)
+                )
+                StatCard(
+                    "Pending sync",
+                    state.pendingSync.toString(),
+                    CategoryColors.OTHER,
+                    Modifier.weight(1f)
+                )
+            }
+
+            Card(
+                onClick = { nav.navigate(Routes.ACTIVITY) },
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.List,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "Today's Activity",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            "See time by category — Study, DSA, Timepass, Shorts & more",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
             }
 
             Card {
@@ -164,26 +229,40 @@ private fun BannerCard(title: String, body: String, action: String, onClick: () 
 
 @Composable
 private fun NextClassCard(subject: String, time: String, room: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
+    ) {
         Column(Modifier.padding(16.dp)) {
-            Text("Next class", color = MaterialTheme.colorScheme.onPrimary, fontSize = 13.sp)
+            Text("Next class", fontSize = 13.sp)
             Spacer(Modifier.height(4.dp))
-            Text(subject, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text(subject, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             if (room.isNotBlank()) {
-                Text("$time · Room $room", color = MaterialTheme.colorScheme.onPrimary, fontSize = 13.sp)
+                Text("$time · Room $room", fontSize = 13.sp)
             } else {
-                Text(time, color = MaterialTheme.colorScheme.onPrimary, fontSize = 13.sp)
+                Text(time, fontSize = 13.sp)
             }
         }
     }
 }
 
 @Composable
-private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
+private fun StatCard(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
     Card(modifier = modifier) {
-        Column(Modifier.padding(12.dp)) {
-            Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

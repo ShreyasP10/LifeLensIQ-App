@@ -67,27 +67,28 @@ class HomeViewModel(
             }
         }
         viewModelScope.launch {
-            val eventsToday = events.eventsBetween(todayStart, Long.MAX_VALUE)
-            val studyMs = eventsToday
-                .filter { it.eventType == EventType.STUDY_SESSION.id }
-                .sumOf { studyDuration(it) }
-            val appEvents = eventsToday.filter { it.eventType == EventType.APP_SESSION.id }
-            val screenMs = appEvents.sumOf { sessionDuration(it) }
-            val attendanceEvents = eventsToday.filter { it.eventType == EventType.CLASS_ATTENDANCE.id }
-            val shortsViews = eventsToday
-                .filter { it.eventType == EventType.SHORT_VIDEO.id }
-                .sumOf { event ->
-                    (JsonUtil.decodePayload(event.payloadJson)["views"] as? kotlinx.serialization.json.JsonPrimitive)
-                        ?.content?.toIntOrNull() ?: 0
+            events.observeEvents(todayStart, Long.MAX_VALUE).collect { eventsToday ->
+                val studyMs = eventsToday
+                    .filter { it.eventType == EventType.STUDY_SESSION.id }
+                    .sumOf { studyDuration(it) }
+                val appEvents = eventsToday.filter { it.eventType == EventType.APP_SESSION.id }
+                val screenMs = appEvents.sumOf { sessionDuration(it) }
+                val attendanceEvents = eventsToday.filter { it.eventType == EventType.CLASS_ATTENDANCE.id }
+                val shortsViews = eventsToday
+                    .filter { it.eventType == EventType.SHORT_VIDEO.id }
+                    .sumOf { event ->
+                        (JsonUtil.decodePayload(event.payloadJson)["views"] as? kotlinx.serialization.json.JsonPrimitive)
+                            ?.content?.toIntOrNull() ?: 0
+                    }
+                _uiState.update {
+                    it.copy(
+                        studyMinutesToday = studyMs / 60_000,
+                        appSessionsToday = appEvents.size,
+                        screenTimeMinutesToday = screenMs / 60_000,
+                        attendanceMarkedToday = attendanceEvents.size,
+                        shortsToday = shortsViews
+                    )
                 }
-            _uiState.update {
-                it.copy(
-                    studyMinutesToday = studyMs / 60_000,
-                    appSessionsToday = appEvents.size,
-                    screenTimeMinutesToday = screenMs / 60_000,
-                    attendanceMarkedToday = attendanceEvents.size,
-                    shortsToday = shortsViews
-                )
             }
         }
         _uiState.update {

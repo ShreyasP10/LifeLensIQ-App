@@ -19,6 +19,13 @@ import kotlinx.coroutines.launch
  * so this watches for the "Reels"/"Shorts" marker in the active window and
  * counts each distinct content change while it is visible (one swipe ≈ one
  * short). Nothing is read or stored except the counts. Best-effort by design.
+ *
+ * Performance: accessibility events run on the tracked app's process, so an
+ * aggressive service slows YouTube/Instagram down and can alter their UI.
+ * To stay invisible we (1) check the cheap event packageName first and only
+ * touch the window tree for our four target apps, (2) never scan more than
+ * once per SCAN_THROTTLE_MS, and (3) bound the tree walk by node budget so a
+ * huge YouTube hierarchy cannot stall the app we are watching.
  */
 class ShortsReelsDetector : AccessibilityService() {
 
@@ -27,55 +34,67 @@ class ShortsReelsDetector : AccessibilityService() {
     private var sessionPlatform: String? = null
     private var sessionViews: Int = 0
     private var sessionStartedAt: Long = 0L
-    private var lastMarkerAt: Long = 0L
     private var lastCountedAt: Long = 0L
     private var lastScanAt: Long = 0L
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val now = System.currentTimeMillis()
-        // Battery guard: never scan more than once per 500 ms.
+        // Cheap gate first: only our target packages are worth scanning.
+        val pkg = event?.packageName?.toString() ?: return
+        if (pkg !in TARGET_PACKAGES) return
+        // Battery guard: never scan more than once per throttle window.
         if (now - lastScanAt < SCAN_THROTTLE_MS) return
         lastScanAt = now
 
         val root = runCatching { rootInActiveWindow }.getOrNull() ?: return
-        val pkg = root.packageName?.toString() ?: return
-        if (pkg !in TARGET_PACKAGES) {
-            closeSessionIfOpen(now)
-            return
-        }
+        try {
+            val marker = findMarker(root)
+            if (marker == null) {
+                closeSessionIfOpen(now)
+                return
+            }
 
-        val marker = findMarker(root)
-        if (marker == null) {
-            closeSessionIfOpen(now)
-            return
+            val platform = PLATFORM_BY_PACKAGE[pkg] ?: "unknown"
+            if (sessionPlatform != platform) {
+                closeSessionIfOpen(now)
+                sessionPlatform = platform
+                sessionViews = 0
+                sessionStartedAt = now
+            }
+            // A content change while the marker stays visible = one swipe (new short).
+            if (now - lastCountedAt >= COUNT_THROTTLE_MS) {
+                sessionViews++
+                lastCountedAt = now
+            }
+        } finally {
+            root.recycle()
         }
-
-        val platform = PLATFORM_BY_PACKAGE[pkg] ?: "unknown"
-        if (sessionPlatform != platform) {
-            closeSessionIfOpen(now)
-            sessionPlatform = platform
-            sessionViews = 0
-            sessionStartedAt = now
-        }
-        // A content change while the marker stays visible = one swipe (new short).
-        if (now - lastCountedAt >= COUNT_THROTTLE_MS) {
-            sessionViews++
-            lastCountedAt = now
-        }
-        lastMarkerAt = now
     }
 
-    private fun findMarker(root: AccessibilityNodeInfo): String? =
-        findMarkerInTree(root)
+    /** Bounded DFS: walks at most MAX_NODES nodes, releasing them on the way back. */
+    private fun findMarker(root: AccessibilityNodeInfo): String? {
+        var budget = MAX_NODES
+        return findMarkerInTree(root, 0, { budget-- }, { budget > 0 })
+    }
 
-    private fun findMarkerInTree(node: AccessibilityNodeInfo): String? {
+    private fun findMarkerInTree(
+        node: AccessibilityNodeInfo,
+        depth: Int,
+        consumeBudget: () -> Unit,
+        hasBudget: () -> Boolean
+    ): String? {
+        consumeBudget()
         val candidates = listOfNotNull(node.text?.toString(), node.contentDescription?.toString())
         candidates.firstOrNull { it in MARKERS }?.let { return it }
-        if (node.childCount == 0) return null
+        if (node.childCount == 0 || depth >= MAX_DEPTH || !hasBudget()) return null
         for (i in 0 until node.childCount) {
+            if (!hasBudget()) break
             val child = runCatching { node.getChild(i) }.getOrNull() ?: continue
-            findMarkerInTree(child)?.let { return it }
-            child.recycle()
+            try {
+                findMarkerInTree(child, depth + 1, consumeBudget, hasBudget)?.let { return it }
+            } finally {
+                child.recycle()
+            }
         }
         return null
     }
@@ -117,8 +136,10 @@ class ShortsReelsDetector : AccessibilityService() {
     }
 
     companion object {
-        private const val SCAN_THROTTLE_MS = 500L
-        private const val COUNT_THROTTLE_MS = 900L
+        private const val SCAN_THROTTLE_MS = 1_200L
+        private const val COUNT_THROTTLE_MS = 1_000L
+        private const val MAX_NODES = 400
+        private const val MAX_DEPTH = 12
 
         private val TARGET_PACKAGES = setOf(
             "com.instagram.android", "com.instagram.lite",

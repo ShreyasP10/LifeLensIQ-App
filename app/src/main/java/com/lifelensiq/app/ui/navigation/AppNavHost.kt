@@ -1,7 +1,9 @@
 package com.lifelensiq.app.ui.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
@@ -19,12 +21,18 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.lifelensiq.app.di.ServiceLocator
 import com.lifelensiq.app.domain.repository.AuthState
+import com.lifelensiq.app.ui.activity.ActivityScreen
+import com.lifelensiq.app.ui.activity.ActivityViewModel
+import com.lifelensiq.app.ui.activity.CategoryDetailScreen
+import com.lifelensiq.app.ui.activity.CategoryDetailViewModel
 import com.lifelensiq.app.ui.attendance.AttendanceScreen
 import com.lifelensiq.app.ui.attendance.AttendanceViewModel
 import com.lifelensiq.app.ui.auth.AuthViewModel
@@ -43,19 +51,24 @@ import com.lifelensiq.app.ui.timetable.TimetableViewModel
 object Routes {
     const val LOGIN = "login"
     const val HOME = "home"
+    const val ACTIVITY = "activity"
+    const val CATEGORY = "category/{category}"
     const val TIMETABLE = "timetable"
     const val SESSIONS = "sessions"
     const val ATTENDANCE = "attendance"
     const val EXPORT = "export"
     const val SETTINGS = "settings"
+
+    fun category(name: String): String = "category/${Uri.encode(name)}"
 }
 
-private val TAB_ROUTES = listOf(Routes.HOME, Routes.TIMETABLE, Routes.SESSIONS, Routes.ATTENDANCE, Routes.SETTINGS)
+private val TAB_ROUTES = listOf(Routes.HOME, Routes.ACTIVITY, Routes.TIMETABLE, Routes.SESSIONS, Routes.ATTENDANCE, Routes.SETTINGS)
 
 private data class TabItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
 private val TABS = listOf(
     TabItem(Routes.HOME, "Home", Icons.Filled.Home),
+    TabItem(Routes.ACTIVITY, "Activity", Icons.Filled.List),
     TabItem(Routes.TIMETABLE, "Timetable", Icons.Filled.DateRange),
     TabItem(Routes.SESSIONS, "Sessions", Icons.Filled.PlayArrow),
     TabItem(Routes.ATTENDANCE, "Attendance", Icons.Filled.CheckCircle),
@@ -131,6 +144,26 @@ fun AppNavHost(
                     HomeViewModel(ServiceLocator.eventRepository(), ServiceLocator.timetableRepository())
                 }
                 HomeScreen(vm, navController)
+            }
+
+            composable(Routes.ACTIVITY) {
+                val vm: ActivityViewModel = viewModel {
+                    ActivityViewModel(ServiceLocator.eventRepository())
+                }
+                ActivityScreen(vm, onCategoryClick = { category ->
+                    navController.navigate(Routes.category(category))
+                })
+            }
+
+            composable(
+                route = Routes.CATEGORY,
+                arguments = listOf(navArgument("category") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val category = Uri.decode(backStackEntry.arguments?.getString("category") ?: "")
+                val vm: CategoryDetailViewModel = viewModel(key = "category-$category") {
+                    CategoryDetailViewModel(ServiceLocator.eventRepository(), category)
+                }
+                CategoryDetailScreen(vm, category, onBack = { navController.popBackStack() })
             }
 
             composable(Routes.TIMETABLE) {
