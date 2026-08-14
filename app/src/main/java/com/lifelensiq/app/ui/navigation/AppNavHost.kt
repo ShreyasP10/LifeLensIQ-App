@@ -70,16 +70,24 @@ fun AppNavHost(
 
     val authRepo = ServiceLocator.authRepository()
     val authState by authRepo.state.collectAsState()
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentEntry?.destination?.route
 
-    LaunchedEffect(authState, initialRoute) {
-        if (authState is AuthState.LoggedIn) {
-            val target = initialRoute?.takeIf { it in TAB_ROUTES } ?: Routes.HOME
-            if (navController.currentBackStackEntry?.destination?.route != target) {
-                navController.navigate(target) { popUpTo(0) }
+    LaunchedEffect(authState, initialRoute, currentEntry) {
+        val entry = currentEntry ?: return@LaunchedEffect
+        when (authState) {
+            is AuthState.LoggedIn -> {
+                val target = initialRoute?.takeIf { it in TAB_ROUTES } ?: Routes.HOME
+                if (entry.destination.route != target) {
+                    navController.navigate(target) { popUpTo(0) }
+                }
             }
-        } else if (authState is AuthState.LoggedOut && navController.currentBackStackEntry?.destination?.route != Routes.LOGIN) {
-            navController.navigate(Routes.LOGIN) { popUpTo(0) }
+            is AuthState.LoggedOut -> {
+                if (entry.destination.route != Routes.LOGIN) {
+                    navController.navigate(Routes.LOGIN) { popUpTo(0) }
+                }
+            }
+            else -> Unit
         }
     }
 
