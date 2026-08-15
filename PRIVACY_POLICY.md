@@ -13,22 +13,27 @@ contacts are ever captured.
 | Category | What is recorded | Why |
 |----------|------------------|-----|
 | App usage | Package name of the foreground app + duration | Time-usage analytics |
-| Screen | Screen on/off/unlock timestamps | Session segmentation |
+| Screen | Screen on/off/unlock timestamps | Session segmentation, pickups, wake/sleep insights |
 | Charging | Charging start/end timestamps | Battery-aware insights |
 | Steps | Step counts (Activity Recognition) | Activity insights |
 | Wake | Screen-wake timestamps | Sleep/interruption insights |
-| Study | Subject, session start/end | Self-tracking |
+| Study | Subject, session start/end, source (timer / focus / manual) | Self-tracking |
+| Focus | List of apps you chose to block + focus session times | Distraction blocking (list is stored **on-device only**) |
 | Tracking state | Start/pause/resume events | Data integrity |
 | Sync status | Sync timestamp + result | Reliability |
 
 The app does **not** read your calendar, location, or other accounts.
+Your per-app **category overrides** (Settings → App Categories) are also stored
+on-device only and never leave your phone.
 
 ## 2. Where data is stored
 
 - **Locally:** Room database inside the app's private sandbox on your device.
 - **Cloud (optional, after sign-in):** Firebase Cloud Firestore, under the
   document path `users/{your-uid}/…`, which only you (and your Firebase
-  project) can access. Firebase security rules deny all other users.
+  project) can access. Firebase security rules deny all other users. The same
+  collection is shared with the LifeLens IQ web dashboard, so data written from
+  the website appears in the app and vice versa — both write under your own uid.
 - **Backups:** app data is **excluded** from Android Auto Backup
   (`allowBackup="false"`).
 
@@ -45,8 +50,9 @@ The app does **not** read your calendar, location, or other accounts.
 - **Review:** export everything as CSV or JSON from the Export screen.
 - **Delete locally:** Settings → Delete local data (removes all on-device records).
 - **Delete cloud:** Settings → Delete cloud data (removes your Firestore documents).
-- **Stop tracking:** revoke Usage Access / Activity Recognition permissions or
-  uninstall the app.
+- **Stop tracking:** Settings → Permissions → **Revoke** any permission (notifications and
+  step tracking revoke in-app; usage access and accessibility open the system page Android
+  requires), or uninstall the app.
 
 ## 5. Contact
 
