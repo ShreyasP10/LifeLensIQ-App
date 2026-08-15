@@ -29,12 +29,19 @@ data class AppUsageItem(
     val category: String
 )
 
+enum class DeviceFilter(val label: String) {
+    ALL("All"),
+    THIS_DEVICE("This device"),
+    WEB("Website")
+}
+
 data class ActivityUiState(
     val loading: Boolean = true,
     val totalMinutes: Long = 0,
     val categories: List<CategoryUsage> = emptyList(),
     val topApps: List<AppUsageItem> = emptyList(),
-    val donutSlices: List<Pair<String, Long>> = emptyList()
+    val donutSlices: List<Pair<String, Long>> = emptyList(),
+    val deviceFilter: DeviceFilter = DeviceFilter.ALL
 )
 
 /**
@@ -43,7 +50,8 @@ data class ActivityUiState(
  * shows the same Study/DSA/Development/... breakdown the dashboard does.
  */
 class ActivityViewModel(
-    private val events: EventRepository
+    private val events: EventRepository,
+    private val deviceId: String
 ) : ViewModel() {
 
     private val todayStart = TimeUtils.todayEpochStart()
@@ -53,10 +61,25 @@ class ActivityViewModel(
     init {
         viewModelScope.launch {
             events.observeEvents(todayStart, Long.MAX_VALUE).collect { list ->
-                _uiState.value = buildState(list)
+                cachedEvents = list
+                _uiState.value = buildState(filterFor(_uiState.value.deviceFilter, list))
+                    .copy(deviceFilter = _uiState.value.deviceFilter)
             }
         }
     }
+
+    fun setDeviceFilter(filter: DeviceFilter) {
+        _uiState.value = buildState(filterFor(filter, cachedEvents)).copy(deviceFilter = filter)
+    }
+
+    private fun filterFor(filter: DeviceFilter, list: List<EventEntity>): List<EventEntity> =
+        when (filter) {
+            DeviceFilter.ALL -> list
+            DeviceFilter.THIS_DEVICE -> list.filter { it.deviceId == deviceId }
+            DeviceFilter.WEB -> list.filter { it.deviceId == "web" }
+        }
+
+    private var cachedEvents: List<EventEntity> = emptyList()
 
     private fun buildState(list: List<EventEntity>): ActivityUiState {
         val overrides = SettingsStore.categoryOverrides()

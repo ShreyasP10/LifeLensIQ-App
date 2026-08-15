@@ -3,6 +3,7 @@ package com.lifelensiq.app.tracking
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
 import android.os.PowerManager
 import com.lifelensiq.app.domain.EventType
 import com.lifelensiq.app.util.PermissionUtils
@@ -99,6 +100,20 @@ class AppUsagePoller(
             closeCurrent(now)
             currentPackage = candidate
             currentStart = now
+        }
+        if (candidate != null) checkFocusBlock(candidate)
+    }
+
+    /** Focus mode: pull the user back when a blocked app comes to foreground. */
+    private fun checkFocusBlock(pkg: String) {
+        if (!com.lifelensiq.app.util.SettingsStore.focusActive) return
+        if (FocusBlockActivity.isShowing) return
+        if (pkg == context.packageName) return
+        if (pkg !in com.lifelensiq.app.util.SettingsStore.focusBlockedApps()) return
+        runCatching {
+            val intent = Intent(context, FocusBlockActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            context.startActivity(intent)
         }
     }
 

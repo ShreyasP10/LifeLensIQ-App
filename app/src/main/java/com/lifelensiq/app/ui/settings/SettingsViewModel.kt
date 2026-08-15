@@ -25,6 +25,7 @@ data class SettingsUiState(
     val usageAccessGranted: Boolean = false,
     val stepsPermissionGranted: Boolean = false,
     val shortsDetectorEnabled: Boolean = false,
+    val notificationsEnabled: Boolean = false,
     val message: String? = null,
     val busy: Boolean = false,
     // Goals & notifications
@@ -34,7 +35,8 @@ data class SettingsUiState(
     val dailySummaryEnabled: Boolean = SettingsStore.dailySummaryEnabled,
     val screenLimitAlertEnabled: Boolean = SettingsStore.screenLimitAlertEnabled,
     val shortsNudgeEnabled: Boolean = SettingsStore.shortsNudgeEnabled,
-    val bedtimeReminderEnabled: Boolean = SettingsStore.bedtimeReminderEnabled
+    val bedtimeReminderEnabled: Boolean = SettingsStore.bedtimeReminderEnabled,
+    val morningReportEnabled: Boolean = SettingsStore.morningReportEnabled
 )
 
 class SettingsViewModel(
@@ -46,9 +48,32 @@ class SettingsViewModel(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
+        refreshAll()
+    }
+
+    fun refreshAll() {
         refreshUsageAccess()
         refreshStepsPermission()
         refreshShortsDetector()
+        refreshNotifications()
+    }
+
+    fun refreshNotifications() {
+        val enabled = androidx.core.app.NotificationManagerCompat
+            .from(ServiceLocator.context()).areNotificationsEnabled()
+        _uiState.update { it.copy(notificationsEnabled = enabled) }
+    }
+
+    fun revokeNotifications(context: Context) {
+        context.revokeSelfPermissionOnKill(android.Manifest.permission.POST_NOTIFICATIONS)
+        refreshNotifications()
+        _uiState.update { it.copy(message = "Notification permission revoked. Grant it again anytime from this screen.") }
+    }
+
+    fun revokeStepsPermission(context: Context) {
+        context.revokeSelfPermissionOnKill(android.Manifest.permission.ACTIVITY_RECOGNITION)
+        refreshStepsPermission()
+        _uiState.update { it.copy(message = "Activity-recognition (steps) permission revoked.") }
     }
 
     fun refreshUsageAccess() {
@@ -155,5 +180,10 @@ class SettingsViewModel(
     fun setBedtimeReminder(enabled: Boolean) {
         SettingsStore.bedtimeReminderEnabled = enabled
         _uiState.update { it.copy(bedtimeReminderEnabled = enabled) }
+    }
+
+    fun setMorningReport(enabled: Boolean) {
+        SettingsStore.morningReportEnabled = enabled
+        _uiState.update { it.copy(morningReportEnabled = enabled) }
     }
 }

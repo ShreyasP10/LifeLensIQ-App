@@ -50,6 +50,17 @@ fun ActivityScreen(vm: ActivityViewModel, onCategoryClick: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DeviceFilter.entries.forEach { filter ->
+                    androidx.compose.material3.FilterChip(
+                        selected = state.deviceFilter == filter,
+                        onClick = { vm.setDeviceFilter(filter) },
+                        label = { Text(filter.label) }
+                    )
+                }
+            }
+        }
+        item {
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer

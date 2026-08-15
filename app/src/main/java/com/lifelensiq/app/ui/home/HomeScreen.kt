@@ -85,6 +85,36 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
             StatCard("Pending sync", state.pendingSync.toString(), CategoryColors.OTHER, Modifier.weight(1f))
         }
 
+        // Wake & sleep
+        Card {
+            Column(Modifier.padding(16.dp)) {
+                Text("Wake & sleep", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "First screen-on and last screen-off of the day — every wake and shutdown is counted.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StatCard("Pickups", state.pickupsToday.toString(), CategoryColors.OTHER, Modifier.weight(1f))
+                    StatCard("First wake", state.firstWake ?: "—", CategoryColors.STUDY, Modifier.weight(1f))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StatCard("Last shutdown", state.lastShutdown ?: "—", CategoryColors.UTILITIES, Modifier.weight(1f))
+                    StatCard("Sleep est.", state.sleepEstimate ?: "—", CategoryColors.ENTERTAINMENT, Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    if (state.sleepEstimate != null)
+                        "Estimated from last night's shutdown to this morning's first wake."
+                    else "Sleep estimate appears after you wake up — it's your last shutdown until first wake.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         // Daily goals
         Card {
             Column(Modifier.padding(16.dp)) {

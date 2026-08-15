@@ -29,6 +29,7 @@ class ScreenStateReceiver(private val scope: CoroutineScope) : BroadcastReceiver
                 scope.launch {
                     emitter.emit(EventType.SCREEN_ON.id, mapOf("precedingIdleMs" to idle))
                     onScreenOn?.invoke(emitter)
+                    com.lifelensiq.app.notifications.MorningReporter.maybePost(context)
                 }
             }
             Intent.ACTION_SCREEN_OFF -> {

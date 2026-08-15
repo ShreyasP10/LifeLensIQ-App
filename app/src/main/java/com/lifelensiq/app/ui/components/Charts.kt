@@ -114,6 +114,59 @@ private fun LegendDot(color: Color, label: String) {
     }
 }
 
+/** Single-series bar chart (trends): values + sparse labels. */
+@Composable
+fun SingleBarChart(
+    values: List<Long>,
+    labels: List<String>,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val textMeasurer = rememberTextMeasurer()
+    val labelStyle = androidx.compose.ui.text.TextStyle(
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontSize = 9.sp
+    )
+    val count = values.size.coerceAtLeast(1)
+
+    Column(modifier) {
+        Canvas(modifier = Modifier.fillMaxWidth().height(110.dp)) {
+            val chartHeight = size.height - 16.dp.toPx()
+            val slotWidth = size.width / count
+            val barWidth = slotWidth * 0.6f
+            val maxValue = max(1L, values.maxOrNull() ?: 0L).coerceAtLeast(1L)
+
+            values.forEachIndexed { i, minutes ->
+                val ratio = (minutes.toFloat() / maxValue).coerceIn(0.03f, 1f)
+                val x = i * slotWidth + (slotWidth - barWidth) / 2f
+                val h = chartHeight * ratio
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(x, chartHeight - h),
+                    size = Size(barWidth, h),
+                    cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                )
+            }
+            // Sparse labels so they don't overlap.
+            val labelStep = (count / 7).coerceAtLeast(1)
+            values.indices.forEach { i ->
+                if (i % labelStep == 0 || i == values.lastIndex) {
+                    val label = labels.getOrNull(i) ?: ""
+                    val layout = textMeasurer.measure(label, labelStyle)
+                    drawText(
+                        layout,
+                        topLeft = Offset(
+                            (i * slotWidth + (slotWidth - layout.size.width) / 2f)
+                                .coerceIn(0f, size.width - layout.size.width),
+                            chartHeight + 4.dp.toPx()
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
 /** Circular progress ring with a label in the center. */
 @Composable
 fun ProgressRing(

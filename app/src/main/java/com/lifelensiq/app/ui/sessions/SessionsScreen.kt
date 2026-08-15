@@ -1,5 +1,6 @@
 package com.lifelensiq.app.ui.sessions
 
+import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,25 +11,35 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.time.Instant
@@ -39,7 +50,19 @@ import java.time.format.DateTimeFormatter
 fun SessionsScreen(vm: SessionsViewModel) {
     val state by vm.uiState.collectAsState()
     var subject by remember { mutableStateOf("") }
+    var focusSubject by remember { mutableStateOf("") }
+    var manualSubject by remember { mutableStateOf("") }
+    var manualMinutes by remember { mutableStateOf("30") }
+    var showAppPicker by remember { mutableStateOf(false) }
     val timeFormat = DateTimeFormatter.ofPattern("d MMM, h:mm a")
+
+    if (showAppPicker) {
+        BlockedAppsDialog(
+            selected = state.focusBlockedApps,
+            onToggle = vm::toggleFocusApp,
+            onDismiss = { showAppPicker = false }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -55,7 +78,7 @@ fun SessionsScreen(vm: SessionsViewModel) {
                 ) else CardDefaults.cardColors()
         ) {
             Column(Modifier.padding(16.dp)) {
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Session status", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     if (state.active) {
                         Text(
@@ -100,6 +123,130 @@ fun SessionsScreen(vm: SessionsViewModel) {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(if (state.active) "Stop Session" else "Start Session")
+                }
+            }
+        }
+
+        // Focus mode
+        Card(
+            colors = if (state.focusActive)
+                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            else CardDefaults.cardColors()
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Filled.Lock,
+                        contentDescription = null,
+                        Modifier.size(18.dp),
+                        tint = if (state.focusActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Focus mode", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    if (state.focusActive) {
+                        Text(
+                            formatElapsed(state.focusElapsedSeconds),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+                Text(
+                    if (state.focusActive) "ACTIVE — ${state.focusSubject}" else "Block distracting apps while studying",
+                    color = if (state.focusActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (state.focusActive) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Opening a blocked app pulls you back to a full-screen notice. " +
+                            "Ending focus writes a study session (locationType FOCUS).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = focusSubject,
+                    onValueChange = { focusSubject = it },
+                    enabled = !state.focusActive,
+                    label = { Text("Focus subject") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                if (state.focusBlockedApps.isNotEmpty()) {
+                    Text(
+                        "Blocking ${state.focusBlockedApps.size} app(s)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { showAppPicker = true },
+                        enabled = !state.focusActive,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Choose apps")
+                    }
+                    Button(
+                        onClick = {
+                            if (state.focusActive) {
+                                vm.endFocus()
+                            } else {
+                                vm.startFocus(focusSubject.ifBlank { "Focus session" }, state.focusBlockedApps)
+                                focusSubject = ""
+                            }
+                        },
+                        enabled = state.focusActive || focusSubject.isNotBlank(),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (state.focusActive) "End Focus" else "Start Focus")
+                    }
+                }
+            }
+        }
+
+        // Manual logger
+        Card {
+            Column(Modifier.padding(16.dp)) {
+                Text("Quick log", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Add a study session you finished without the timer — shows up in history and syncs to the website.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = manualSubject,
+                        onValueChange = { manualSubject = it },
+                        label = { Text("Subject") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1.6f)
+                    )
+                    OutlinedTextField(
+                        value = manualMinutes,
+                        onValueChange = { manualMinutes = it.filter(Char::isDigit).take(4) },
+                        label = { Text("Minutes") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        vm.logStudyManually(manualSubject, manualMinutes.toIntOrNull() ?: 0)
+                        manualSubject = ""
+                        manualMinutes = "30"
+                    },
+                    enabled = manualSubject.isNotBlank() && (manualMinutes.toIntOrNull() ?: 0) > 0,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Refresh, contentDescription = null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Log study session")
                 }
             }
         }
@@ -158,6 +305,54 @@ fun SessionsScreen(vm: SessionsViewModel) {
             }
         }
     }
+}
+
+@Composable
+private fun BlockedAppsDialog(
+    selected: Set<String>,
+    onToggle: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val apps = remember {
+        runCatching {
+            val pm = context.packageManager
+            val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+            pm.queryIntentActivities(intent, PackageManager.MATCH_ALL).mapNotNull { resolve ->
+                val pkg = resolve.activityInfo.packageName
+                if (pkg == context.packageName) null else {
+                    val label = runCatching {
+                        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+                    }.getOrDefault(pkg)
+                    pkg to label
+                }
+            }.sortedBy { it.second }
+        }.getOrDefault(emptyList())
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Block during focus") },
+        text = {
+            LazyColumn(Modifier.height(360.dp)) {
+                items(apps, key = { it.first }) { (pkg, label) ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = pkg in selected,
+                            onCheckedChange = { onToggle(pkg) }
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(label, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Done") }
+        }
+    )
 }
 
 private fun formatElapsed(totalSeconds: Long): String {
