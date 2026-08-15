@@ -5,12 +5,9 @@ import com.lifelensiq.app.data.local.AppDatabase
 import com.lifelensiq.app.data.remote.FirebaseAuthRepository
 import com.lifelensiq.app.data.remote.FirestoreEventSource
 import com.lifelensiq.app.data.repository.EventRepositoryImpl
-import com.lifelensiq.app.data.repository.TimetableRepositoryImpl
 import com.lifelensiq.app.domain.repository.AuthRepository
 import com.lifelensiq.app.domain.repository.EventRepository
-import com.lifelensiq.app.domain.repository.TimetableRepository
 import com.lifelensiq.app.export.ExportUseCase
-import com.lifelensiq.app.timetable.TimetableImporter
 import com.lifelensiq.app.tracking.EventEmitter
 import com.lifelensiq.app.tracking.WakeDetector
 import com.lifelensiq.app.util.DeviceIdProvider
@@ -48,15 +45,8 @@ object ServiceLocator {
     }
     fun eventRepository(): EventRepository = _eventRepo
 
-    private val _timetableRepo by lazy {
-        TimetableRepositoryImpl(_db, _auth, _remote)
-    }
-    fun timetableRepository(): TimetableRepository = _timetableRepo
-
-    private val _exportUseCase by lazy { ExportUseCase(_db, _auth, _timetableRepo) }
+    private val _exportUseCase by lazy { ExportUseCase(_db, _auth) }
     fun exportUseCase(): ExportUseCase = _exportUseCase
-
-    fun timetableImporter() = TimetableImporter()
 
     private val _wakeDetector by lazy { WakeDetector() }
     fun wakeDetector(): WakeDetector? = _wakeDetector

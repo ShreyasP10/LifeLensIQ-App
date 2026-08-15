@@ -66,7 +66,6 @@ class EventRepositoryImpl(
 
     override suspend fun deleteAllLocal() {
         eventDao.deleteAll()
-        db.timetableDao().deleteAll()
         syncLogDao.deleteAll()
     }
 
@@ -74,4 +73,47 @@ class EventRepositoryImpl(
         val uid = auth.userId ?: return
         remote.deleteAllUserData(uid)
     }
+
+    override suspend fun downloadCloud(): Int {
+        val uid = auth.userId ?: return 0
+        return try {
+            val docs = remote.fetchAllEvents(uid)
+            val entities = docs.mapNotNull { it.toEventEntity() }
+            if (entities.isNotEmpty()) eventDao.insertAll(entities)
+            entities.size
+        } catch (_: Throwable) {
+            0 // Uploads already succeeded; a failed pull must not fail the run.
+        }
+    }
+
+    override suspend fun prune(retentionMs: Long) {
+        val cutoff = System.currentTimeMillis() - retentionMs
+        eventDao.deleteSyncedBefore(cutoff)
+        syncLogDao.deleteBefore(cutoff)
+    }
+}
+
+/**
+ * Maps a cloud doc (web dashboard envelope) back into a local event.
+ * Accepts both the web format (`id`/`ts`/`metadata`) and the app format
+ * (`eventId`/`timestamp`/`payload`). Deduplication is automatic — Room
+ * REPLACEs by primary key `eventId`.
+ */
+private fun Map<String, Any?>.toEventEntity(): EventEntity? {
+    val eventId = (this["eventId"] as? String) ?: (this["id"] as? String) ?: return null
+    val timestamp = (this["timestamp"] as? Number)?.toLong()
+        ?: (this["ts"] as? Number)?.toLong() ?: return null
+    val eventType = (this["eventType"] as? String) ?: return null
+    val payload = this["metadata"] as? Map<*, *>
+        ?: this["payload"] as? Map<*, *>
+        ?: emptyMap<String, Any?>()
+    return EventEntity(
+        eventId = eventId,
+        userId = (this["userId"] as? String) ?: "anonymous",
+        deviceId = (this["deviceId"] as? String) ?: (this["device"] as? String) ?: "",
+        eventType = eventType,
+        payloadJson = JsonUtil.encodePayload(payload.mapKeys { it.key.toString() }),
+        timestamp = timestamp,
+        synced = true
+    )
 }

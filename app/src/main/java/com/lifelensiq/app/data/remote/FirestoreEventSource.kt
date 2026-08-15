@@ -1,5 +1,6 @@
 package com.lifelensiq.app.data.remote
 
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.lifelensiq.app.data.local.EventEntity
 import com.lifelensiq.app.util.JsonUtil
@@ -57,53 +58,59 @@ class FirestoreEventSource {
                 "title" to ((payload["appName"] as? String) ?: pkg),
                 "metadata" to payload,
                 "schemaVersion" to event.schemaVersion
-            ))
+            ).let { JsonUtil.forFirestore(it) })
         }
         batch.commit().await()
         return events.size
     }
 
     /**
-     * Upload the timetable as a single doc in the web dashboard's format:
-     * `users/{uid}/timetable` = { source, generatedAt, batch, entries[] }.
+     * Fetch every event doc for a user (chunked by document id), including
+     * events written by the web dashboard. Returns raw cloud maps.
      */
-    suspend fun uploadTimetable(userId: String, entries: List<Map<String, Any?>>, batchLabel: String?) {
-        db.collection("users").document(userId)
-            .collection("timetable").document("data")
-            .set(mapOf(
-                "source" to "LifeLens IQ Android app",
-                "generatedAt" to System.currentTimeMillis(),
-                "updatedAt" to System.currentTimeMillis(),
-                "batch" to (batchLabel ?: ""),
-                "entries" to entries
-            ))
-            .await()
-    }
-
-    /** Fetch all events from the cloud (for cloud export). Returns raw maps. */
     suspend fun fetchAllEvents(userId: String): List<Map<String, Any?>> {
-        val docs = db.collection("users").document(userId)
-            .collection("events")
-            .orderBy("timestamp")
-            .get()
-            .await()
-        return docs.documents.map { it.data ?: emptyMap() }
+        val out = mutableListOf<Map<String, Any?>>()
+        var lastId: String? = null
+        while (true) {
+            var query = db.collection("users").document(userId)
+                .collection("events")
+                .orderBy(FieldPath.documentId())
+                .limit(FETCH_CHUNK_SIZE)
+            if (lastId != null) query = query.startAfter(lastId)
+            val docs = query.get().await()
+            if (docs.documents.isEmpty()) break
+            docs.documents.forEach { out.add(it.data ?: emptyMap()) }
+            lastId = docs.documents.last().id
+            if (docs.documents.size < FETCH_CHUNK_SIZE) break
+        }
+        return out
     }
 
-    /** Delete every event + timetable doc for a user. */
+    /**
+     * Delete every event doc for a user. Deletes in chunks because
+     * Firestore batches are capped at 500 writes per commit.
+     */
     suspend fun deleteAllUserData(userId: String) {
-        val events = db.collection("users").document(userId).collection("events").get().await()
-        val timetable = db.collection("users").document(userId).collection("timetable").get().await()
-        val batch = db.batch()
-        events.documents.forEach { batch.delete(it.reference) }
-        timetable.documents.forEach { batch.delete(it.reference) }
-        batch.delete(db.collection("users").document(userId).collection("timetable").document("data"))
-        batch.commit().await()
+        val eventsRef = db.collection("users").document(userId).collection("events")
+        while (true) {
+            val docs = eventsRef.orderBy(FieldPath.documentId())
+                .limit(DELETE_CHUNK_SIZE).get().await()
+            if (docs.documents.isEmpty()) break
+            val batch = db.batch()
+            docs.documents.forEach { batch.delete(it.reference) }
+            batch.commit().await()
+            if (docs.documents.size < DELETE_CHUNK_SIZE) break
+        }
     }
 
     private fun asLong(value: Any?): Long? = when (value) {
         is Number -> value.toLong()
         is String -> value.toLongOrNull()
         else -> null
+    }
+
+    companion object {
+        private const val DELETE_CHUNK_SIZE = 400L
+        private const val FETCH_CHUNK_SIZE = 500L
     }
 }

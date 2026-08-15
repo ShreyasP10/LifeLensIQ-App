@@ -36,6 +36,9 @@ interface EventDao {
     @Query("SELECT * FROM events WHERE synced = 1 AND timestamp < :cutoff")
     suspend fun getSyncedBefore(cutoff: Long): List<EventEntity>
 
+    @Query("DELETE FROM events WHERE synced = 1 AND timestamp < :cutoff")
+    suspend fun deleteSyncedBefore(cutoff: Long): Int
+
     @Query("DELETE FROM events WHERE eventId IN (:ids)")
     suspend fun deleteByIds(ids: List<String>): Int
 

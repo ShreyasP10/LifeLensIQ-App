@@ -86,10 +86,7 @@ APK output: `app\build\outputs\apk\debug\app-debug.apk`
    - App → **Settings** tab → **Open Usage Access Settings** → allow **LifeLens IQ**
    - Go back → tap **Re-check permission** (banner on Home disappears when granted)
 4. **Step tracking** (optional): Settings → **Enable step tracking** → allow Activity Recognition.
-5. **Import timetable** (unlocks Home/Attendance/Sessions/class reminders):
-   - Settings → **Import bundled sample (B1 + IP)** — or
-   - **Import timetable JSON file…** → pick `timetable_personalized.json` from `assets/table/`
-6. **Verify tracking is live**: the persistent notification *"LifeLens IQ is tracking"* should be visible. Home shows today's stats.
+5. **Verify tracking is live**: the persistent notification *"LifeLens IQ is tracking"* should be visible. Home shows today's stats.
 
 ---
 
@@ -98,9 +95,7 @@ APK output: `app\build\outputs\apk\debug\app-debug.apk`
 | Check | How |
 |-------|-----|
 | App usage recorded | Use some apps → wait ≤ 30 s → Home "Screen" stat grows |
-| Class reminders | With timetable imported, a notification fires 15 min before each lecture |
-| Attendance | Attendance tab → mark a class → Home shows "Attendance: 1/5 marked" |
-| Study sessions | Sessions tab → pick subject → Start → Stop → appears in "Today's sessions" |
+| Study sessions | Sessions tab → type a subject → Start → Stop → appears in "Today's sessions" |
 | Steps | Walk a few steps → check a `STEPS` event exists (export or DB) |
 | Sync to Firestore | Firestore console → `users/{uid}/events/` → docs appear within ~15 min (or tap **Sync now** in Settings) |
 | Offline resilience | Airplane mode → track → enable network → events sync with no duplicates |

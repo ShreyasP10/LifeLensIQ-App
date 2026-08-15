@@ -27,6 +27,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LifeLensIQ" />
+
         <service
             android:name=".tracking.LifeLensIQTrackerService"
             android:exported="false"
@@ -39,6 +44,34 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".widget.LifeLensIQWidgetProvider"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.lifelensiq.app.action.WIDGET_SYNC" />
+                <action android:name="com.lifelensiq.app.action.WIDGET_REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/lifelensiq_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.LifeLensIQSmallWidgetProvider"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.lifelensiq.app.action.WIDGET_SYNC" />
+                <action android:name="com.lifelensiq.app.action.WIDGET_REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/lifelensiq_widget_info_small" />
         </receiver>
 
         <service

@@ -15,7 +15,7 @@ import java.time.format.DateTimeFormatter
  */
 class CsvExporter : Exporter {
 
-    override fun write(events: List<EventEntity>, timetable: List<Map<String, Any?>>, out: OutputStream) {
+    override fun write(events: List<EventEntity>, out: OutputStream) {
         val writer = OutputStreamWriter(out, StandardCharsets.UTF_8)
         writer.write("\uFEFF") // BOM for Excel
         writer.write(HEADER.joinToString(","))

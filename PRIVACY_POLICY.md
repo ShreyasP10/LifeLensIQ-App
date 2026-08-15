@@ -18,11 +18,9 @@ contacts are ever captured.
 | Steps | Step counts (Activity Recognition) | Activity insights |
 | Wake | Screen-wake timestamps | Sleep/interruption insights |
 | Study | Subject, session start/end | Self-tracking |
-| Attendance | Timetable slots marked attended | Attendance insights |
 | Tracking state | Start/pause/resume events | Data integrity |
 | Sync status | Sync timestamp + result | Reliability |
 
-Your **timetable** (subjects, times, rooms) is imported from a file you choose.
 The app does **not** read your calendar, location, or other accounts.
 
 ## 2. Where data is stored

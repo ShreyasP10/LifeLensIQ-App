@@ -56,14 +56,15 @@ object WebCategoryMapper {
 
     fun categoryFor(eventType: String, packageName: String?): String = when {
         eventType == EventType.SHORT_VIDEO.id -> SHORT_FORM
-        eventType == EventType.STUDY_SESSION.id || eventType == EventType.CLASS_ATTENDANCE.id -> STUDY
+        eventType == EventType.STUDY_SESSION.id -> STUDY
         eventType == EventType.APP_SESSION.id -> categoryForPackage(packageName)
         eventType in neutralTypes -> UTILITIES
         else -> OTHER
     }
 
-    fun categoryForPackage(packageName: String?): String {
+    fun categoryForPackage(packageName: String?, overrides: Map<String, String> = emptyMap()): String {
         if (packageName.isNullOrBlank()) return OTHER
+        overrides[packageName]?.let { return it }
         val pkg = packageName.lowercase()
         return packageRules.firstOrNull { pkg.contains(it.first) }?.second ?: OTHER
     }

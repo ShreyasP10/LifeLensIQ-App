@@ -19,7 +19,6 @@ app/src/main/java/com/lifelensiq/app/
 ├── tracking/               Foreground service, pollers, receivers, step tracker
 ├── sync/                   SyncWorker + scheduler
 ├── export/                 CSV / JSON exporters + use case
-├── timetable/              Import/validate timetable_personalized.json
 └── ui/                     Compose screens + ViewModels + theme
 ```
 
@@ -37,15 +36,14 @@ app/src/main/java/com/lifelensiq/app/
 
 1. Sign up with email (or log in).
 2. Grant **Usage access** (Settings deep link) — required for app-usage tracking.
-3. Import timetable: Settings → Import timetable → pick `assets/timetable_personalized.json`
-   (sample provided — matches your real TE-B timetable for B1 + IP).
-4. Tracking starts automatically; syncs to Firestore every 15 min.
-5. Export data from the Export screen (CSV / JSON) for your ML pipeline.
+3. Tracking starts automatically; syncs to Firestore every 15 min.
+4. Log study sessions manually from the Sessions tab (free-text subject).
+5. Export data from the Export screen (CSV / JSON / NDJSON) for your ML pipeline.
 
 ## Privacy
 
 See [PRIVACY_POLICY.md](PRIVACY_POLICY.md). Summary: metadata only (app usage,
-screen, charging, steps, study, attendance — no messages, media, location);
+screen, charging, steps, study sessions — no messages, media, location);
 data stays on-device until you sign in, then syncs only to your own Firestore
 account (rules in `firestore.rules`); excluded from Android backups; no ads,
 analytics, or third-party SDKs; one-tap delete for local and cloud data.

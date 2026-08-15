@@ -8,8 +8,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.lifelensiq.app.notifications.InsightScheduler
 import com.lifelensiq.app.sync.SyncScheduler
-import com.lifelensiq.app.tracking.ClassReminderWorker
 import com.lifelensiq.app.tracking.LifeLensIQTrackerService
 import com.lifelensiq.app.ui.navigation.AppNavHost
 import com.lifelensiq.app.ui.theme.LifeLensIQTheme
@@ -26,7 +26,8 @@ class MainActivity : ComponentActivity() {
         LifeLensIQTrackerService.start(this)
         SyncScheduler.schedule(this)
         SyncScheduler.enqueue(this)
-        ClassReminderWorker.schedule(this)
+        InsightScheduler.schedule(this)
+        com.lifelensiq.app.widget.LifeLensIQWidgetProvider.refresh(this)
 
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=

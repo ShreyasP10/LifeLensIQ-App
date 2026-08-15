@@ -1,23 +1,21 @@
 package com.lifelensiq.app.ui.navigation
 
 import android.net.Uri
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -29,52 +27,46 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.lifelensiq.app.di.ServiceLocator
 import com.lifelensiq.app.domain.repository.AuthState
-import kotlinx.coroutines.delay
 import com.lifelensiq.app.ui.activity.ActivityScreen
 import com.lifelensiq.app.ui.activity.ActivityViewModel
 import com.lifelensiq.app.ui.activity.CategoryDetailScreen
 import com.lifelensiq.app.ui.activity.CategoryDetailViewModel
-import com.lifelensiq.app.ui.attendance.AttendanceScreen
-import com.lifelensiq.app.ui.attendance.AttendanceViewModel
 import com.lifelensiq.app.ui.auth.AuthViewModel
 import com.lifelensiq.app.ui.auth.LoginScreen
+import com.lifelensiq.app.ui.category.CategoryOverrideScreen
+import com.lifelensiq.app.ui.category.CategoryOverrideViewModel
+import com.lifelensiq.app.ui.components.AppBottomBar
+import com.lifelensiq.app.ui.components.AppTopBar
+import com.lifelensiq.app.ui.components.CategoryTitle
 import com.lifelensiq.app.ui.export.ExportScreen
 import com.lifelensiq.app.ui.export.ExportViewModel
 import com.lifelensiq.app.ui.home.HomeScreen
 import com.lifelensiq.app.ui.home.HomeViewModel
+import com.lifelensiq.app.ui.onboarding.OnboardingScreen
 import com.lifelensiq.app.ui.sessions.SessionsScreen
 import com.lifelensiq.app.ui.sessions.SessionsViewModel
 import com.lifelensiq.app.ui.settings.SettingsScreen
 import com.lifelensiq.app.ui.settings.SettingsViewModel
-import com.lifelensiq.app.ui.timetable.TimetableScreen
-import com.lifelensiq.app.ui.timetable.TimetableViewModel
+import com.lifelensiq.app.util.SettingsStore
+import kotlinx.coroutines.delay
 
 object Routes {
     const val LOGIN = "login"
     const val HOME = "home"
     const val ACTIVITY = "activity"
     const val CATEGORY = "category/{category}"
-    const val TIMETABLE = "timetable"
     const val SESSIONS = "sessions"
-    const val ATTENDANCE = "attendance"
     const val EXPORT = "export"
     const val SETTINGS = "settings"
+    const val CATEGORY_OVERRIDES = "category-overrides"
 
     fun category(name: String): String = "category/${Uri.encode(name)}"
 }
 
-private val TAB_ROUTES = listOf(Routes.HOME, Routes.ACTIVITY, Routes.TIMETABLE, Routes.SESSIONS, Routes.ATTENDANCE, Routes.SETTINGS)
+private val TAB_ROUTES = listOf(Routes.HOME, Routes.ACTIVITY, Routes.SESSIONS, Routes.SETTINGS)
 
-private data class TabItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-
-private val TABS = listOf(
-    TabItem(Routes.HOME, "Home", Icons.Filled.Home),
-    TabItem(Routes.ACTIVITY, "Activity", Icons.Filled.List),
-    TabItem(Routes.TIMETABLE, "Timetable", Icons.Filled.DateRange),
-    TabItem(Routes.SESSIONS, "Sessions", Icons.Filled.PlayArrow),
-    TabItem(Routes.ATTENDANCE, "Attendance", Icons.Filled.CheckCircle),
-    TabItem(Routes.SETTINGS, "Settings", Icons.Filled.Settings)
-)
+/** Screens with a back arrow instead of a selected bottom tab. */
+private val DETAIL_ROUTES = listOf(Routes.CATEGORY, Routes.EXPORT, Routes.CATEGORY_OVERRIDES)
 
 @Composable
 fun AppNavHost(
@@ -86,6 +78,32 @@ fun AppNavHost(
     val authState by authRepo.state.collectAsState()
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route
+    var onboarded by remember { mutableStateOf(SettingsStore.onboardingDone) }
+
+    // First launch: walk through the onboarding pages before anything else.
+    if (!onboarded) {
+        OnboardingScreen(
+            onDone = {
+                SettingsStore.onboardingDone = true
+                onboarded = true
+            }
+        )
+        return
+    }
+
+    // Don't mount the NavHost until auth resolves: otherwise the login
+    // screen flashes for a frame on cold start with a restored session.
+    if (authState is AuthState.Loading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    val startDestination = when (authState) {
+        is AuthState.LoggedIn -> initialRoute?.takeIf { it in TAB_ROUTES } ?: Routes.HOME
+        else -> Routes.LOGIN
+    }
 
     LaunchedEffect(authState, initialRoute) {
         val target = when (authState) {
@@ -102,34 +120,48 @@ fun AppNavHost(
         }
     }
 
+    val categoryName = remember(currentEntry) {
+        currentEntry?.arguments?.getString("category")?.let(Uri::decode)
+    }
+    val showBars = currentRoute != null && currentRoute != Routes.LOGIN
+    val showBack = currentRoute in DETAIL_ROUTES
+
     Scaffold(
+        topBar = {
+            if (showBars) {
+                AppTopBar(
+                    title = {
+                        if (currentRoute == Routes.CATEGORY) {
+                            CategoryTitle(categoryName ?: "Category")
+                        } else {
+                            Text(topBarTitleFor(currentRoute))
+                        }
+                    },
+                    onBack = if (showBack) ({ navController.popBackStack() }) else null
+                )
+            }
+        },
         bottomBar = {
-            if (currentRoute in TAB_ROUTES) {
-                NavigationBar {
-                    TABS.forEach { tab ->
-                        NavigationBarItem(
-                            selected = currentRoute == tab.route,
-                            onClick = {
-                                navController.navigate(tab.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) }
-                        )
+            if (showBars) {
+                AppBottomBar(
+                    currentRoute = currentRoute,
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
+                )
             }
         }
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.LOGIN,
-            modifier = androidx.compose.ui.Modifier.padding(bottom = padding.calculateBottomPadding())
+            startDestination = startDestination,
+            modifier = Modifier.padding(padding)
         ) {
 
             composable(Routes.LOGIN) {
@@ -139,7 +171,7 @@ fun AppNavHost(
 
             composable(Routes.HOME) {
                 val vm: HomeViewModel = viewModel {
-                    HomeViewModel(ServiceLocator.eventRepository(), ServiceLocator.timetableRepository())
+                    HomeViewModel(ServiceLocator.eventRepository())
                 }
                 HomeScreen(vm, navController)
             }
@@ -161,47 +193,49 @@ fun AppNavHost(
                 val vm: CategoryDetailViewModel = viewModel(key = "category-$category") {
                     CategoryDetailViewModel(ServiceLocator.eventRepository(), category)
                 }
-                CategoryDetailScreen(vm, category, onBack = { navController.popBackStack() })
-            }
-
-            composable(Routes.TIMETABLE) {
-                val vm: TimetableViewModel = viewModel {
-                    TimetableViewModel(ServiceLocator.timetableRepository())
-                }
-                TimetableScreen(vm, onBack = { navController.popBackStack() })
+                CategoryDetailScreen(vm, category)
             }
 
             composable(Routes.SESSIONS) {
                 val vm: SessionsViewModel = viewModel {
-                    SessionsViewModel(ServiceLocator.eventRepository(), ServiceLocator.timetableRepository())
+                    SessionsViewModel(ServiceLocator.eventRepository())
                 }
-                SessionsScreen(vm, onBack = { navController.popBackStack() })
-            }
-
-            composable(Routes.ATTENDANCE) {
-                val vm: AttendanceViewModel = viewModel {
-                    AttendanceViewModel(ServiceLocator.eventRepository(), ServiceLocator.timetableRepository())
-                }
-                AttendanceScreen(vm, onBack = { navController.popBackStack() })
+                SessionsScreen(vm)
             }
 
             composable(Routes.EXPORT) {
                 val vm: ExportViewModel = viewModel {
                     ExportViewModel(ServiceLocator.exportUseCase())
                 }
-                ExportScreen(vm, onBack = { navController.popBackStack() })
+                ExportScreen(vm)
             }
 
             composable(Routes.SETTINGS) {
                 val vm: SettingsViewModel = viewModel {
                     SettingsViewModel(
                         auth = ServiceLocator.authRepository(),
-                        events = ServiceLocator.eventRepository(),
-                        timetable = ServiceLocator.timetableRepository()
+                        events = ServiceLocator.eventRepository()
                     )
                 }
-                SettingsScreen(vm, onBack = { navController.popBackStack() })
+                SettingsScreen(vm, navController)
+            }
+
+            composable(Routes.CATEGORY_OVERRIDES) {
+                val vm: CategoryOverrideViewModel = viewModel {
+                    CategoryOverrideViewModel(ServiceLocator.context() as android.app.Application)
+                }
+                CategoryOverrideScreen(vm)
             }
         }
     }
+}
+
+private fun topBarTitleFor(route: String?): String = when (route) {
+    Routes.HOME -> "LifeLens IQ"
+    Routes.ACTIVITY -> "Today's Activity"
+    Routes.SESSIONS -> "Study Sessions"
+    Routes.SETTINGS -> "Settings"
+    Routes.EXPORT -> "Export Data"
+    Routes.CATEGORY_OVERRIDES -> "App Categories"
+    else -> ""
 }

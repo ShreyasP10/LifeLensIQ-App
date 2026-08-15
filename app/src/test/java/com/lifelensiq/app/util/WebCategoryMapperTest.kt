@@ -50,9 +50,8 @@ class WebCategoryMapperTest {
     }
 
     @Test
-    fun `study sessions and attendance are Study`() {
+    fun `study sessions map to Study`() {
         assertEquals("Study", WebCategoryMapper.categoryFor(EventType.STUDY_SESSION.id, null))
-        assertEquals("Study", WebCategoryMapper.categoryFor(EventType.CLASS_ATTENDANCE.id, null))
     }
 
     @Test

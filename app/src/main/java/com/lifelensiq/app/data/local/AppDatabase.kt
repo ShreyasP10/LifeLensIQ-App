@@ -6,14 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [EventEntity::class, TimetableEntity::class, SyncLogEntity::class],
-    version = 1,
+    entities = [EventEntity::class, SyncLogEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun eventDao(): EventDao
-    abstract fun timetableDao(): TimetableDao
     abstract fun syncLogDao(): SyncLogDao
 
     companion object {

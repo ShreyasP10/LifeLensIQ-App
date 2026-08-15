@@ -10,18 +10,24 @@ import android.hardware.SensorManager
 import androidx.core.content.ContextCompat
 import com.lifelensiq.app.domain.EventType
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
  * Step counter via TYPE_STEP_COUNTER (cumulative since boot).
- * Emits STEPS events with the delta on each sensor update.
+ * Deltas are accumulated and emitted as one batched STEPS event every
+ * FLUSH_INTERVAL_MS instead of one event per sensor tick.
  * No-op if permission missing or sensor absent.
  */
 class StepTracker(context: Context) {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val sensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+    private val lock = Any()
+
     private var lastSteps: Int = 0
+    private var pendingDelta: Int = 0
+    private var lastCumulative: Int = 0
     private var registered = false
     private var emitterRef: EventEmitter? = null
     private var scopeRef: CoroutineScope? = null
@@ -33,18 +39,14 @@ class StepTracker(context: Context) {
     private val listener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
             val cumulative = event.values[0].toInt()
-            val delta = (cumulative - lastSteps).coerceAtLeast(0)
-            if (lastSteps > 0 && delta > 0) {
-                val emitter = emitterRef ?: return
-                val scope = scopeRef ?: return
-                scope.launch {
-                    emitter.emit(
-                        EventType.STEPS.id,
-                        mapOf("stepDelta" to delta, "cumulativeSteps" to cumulative)
-                    )
+            synchronized(lock) {
+                val delta = (cumulative - lastSteps).coerceAtLeast(0)
+                if (lastSteps > 0 && delta > 0) {
+                    pendingDelta += delta
+                    lastCumulative = cumulative
                 }
+                lastSteps = cumulative
             }
-            lastSteps = cumulative
         }
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -56,14 +58,43 @@ class StepTracker(context: Context) {
         scopeRef = scope
         sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
         registered = true
+        scope.launch {
+            while (registered) {
+                delay(FLUSH_INTERVAL_MS)
+                flush()
+            }
+        }
     }
 
     fun stop() {
+        flush()
         if (registered) {
             sensorManager.unregisterListener(listener)
             registered = false
         }
         emitterRef = null
         scopeRef = null
+    }
+
+    private fun flush() {
+        val emitter = emitterRef ?: return
+        val scope = scopeRef ?: return
+        val (delta, cumulative) = synchronized(lock) {
+            val d = pendingDelta
+            pendingDelta = 0
+            d to lastCumulative
+        }
+        if (delta > 0) {
+            scope.launch {
+                emitter.emit(
+                    EventType.STEPS.id,
+                    mapOf("stepDelta" to delta, "cumulativeSteps" to cumulative)
+                )
+            }
+        }
+    }
+
+    companion object {
+        const val FLUSH_INTERVAL_MS = 10 * 60 * 1000L
     }
 }

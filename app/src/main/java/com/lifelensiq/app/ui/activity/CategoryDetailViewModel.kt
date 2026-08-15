@@ -6,6 +6,7 @@ import com.lifelensiq.app.data.local.EventEntity
 import com.lifelensiq.app.domain.EventType
 import com.lifelensiq.app.domain.repository.EventRepository
 import com.lifelensiq.app.util.JsonUtil
+import com.lifelensiq.app.util.SettingsStore
 import com.lifelensiq.app.util.TimeUtils
 import com.lifelensiq.app.util.WebCategoryMapper
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,11 +56,13 @@ class CategoryDetailViewModel(
     }
 
     private fun categoryOf(e: EventEntity): String? = when (e.eventType) {
-        EventType.APP_SESSION.id -> WebCategoryMapper.categoryForPackage(payloadString(e, "packageName"))
+        EventType.APP_SESSION.id -> WebCategoryMapper.categoryForPackage(payloadString(e, "packageName"), overrides)
         EventType.SHORT_VIDEO.id -> WebCategoryMapper.SHORT_FORM
         EventType.STUDY_SESSION.id -> WebCategoryMapper.STUDY
         else -> null
     }
+
+    private val overrides = SettingsStore.categoryOverrides()
 
     private fun itemFor(e: EventEntity): AppUsageItem? = when (e.eventType) {
         EventType.APP_SESSION.id -> {
@@ -68,7 +71,7 @@ class CategoryDetailViewModel(
                 name = payloadString(e, "appName").takeIf { it.isNotBlank() } ?: pkg,
                 minutes = payloadLong(e, "durationMs") / 60_000,
                 sessions = 1,
-                category = WebCategoryMapper.categoryForPackage(pkg)
+                category = WebCategoryMapper.categoryForPackage(pkg, overrides)
             )
         }
         EventType.SHORT_VIDEO.id -> AppUsageItem(

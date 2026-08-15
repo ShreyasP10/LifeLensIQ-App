@@ -3,13 +3,15 @@ package com.lifelensiq.app.tracking
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.os.PowerManager
 import com.lifelensiq.app.domain.EventType
 import com.lifelensiq.app.util.PermissionUtils
 import kotlinx.coroutines.delay
 
 /**
- * Polls UsageStatsManager every 15 s and emits APP_SESSION events
- * (start/end of foreground app usage).
+ * Polls UsageStatsManager and emits APP_SESSION events
+ * (start/end of foreground app usage). Polls every 15 s while the
+ * screen is on and relaxes to 60 s while it is off to save battery.
  */
 class AppUsagePoller(
     private val context: Context,
@@ -23,14 +25,39 @@ class AppUsagePoller(
     private val usm: UsageStatsManager
         get() = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
+    private val powerManager: PowerManager
+        get() = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+
     fun usageAccessGranted(): Boolean = PermissionUtils.isUsageAccessGranted(context)
 
     suspend fun pollLoop() {
         wasGranted = usageAccessGranted()
         while (true) {
+            if (isNight()) {
+                // Night pause: no polling 00:00-06:00 — battery saver.
+                closeCurrentIfIdle()
+                delay(timeUntilMorningMs())
+                continue
+            }
             runCatching { pollOnce() }
-            delay(POLL_INTERVAL_MS)
+            delay(pollIntervalMs())
         }
+    }
+
+    /** 15 s while the screen is on, 60 s while off. */
+    private fun pollIntervalMs(): Long =
+        if (powerManager.isInteractive) POLL_INTERVAL_MS else IDLE_POLL_INTERVAL_MS
+
+    private fun isNight(): Boolean {
+        val hour = java.time.LocalTime.now().hour
+        return hour < NIGHT_PAUSE_END_HOUR
+    }
+
+    /** Millis until 06:00 today (or tomorrow if past midnight... always today when hour < 6). */
+    private fun timeUntilMorningMs(): Long {
+        val now = java.time.ZonedDateTime.now()
+        val target = now.toLocalDate().atTime(NIGHT_PAUSE_END_HOUR, 0).atZone(now.zone)
+        return java.time.Duration.between(now, target).toMillis().coerceAtLeast(1)
     }
 
     suspend fun pollOnce() {
@@ -112,6 +139,8 @@ class AppUsagePoller(
 
     companion object {
         const val POLL_INTERVAL_MS = 15_000L
+        const val IDLE_POLL_INTERVAL_MS = 60_000L
         const val IDLE_CLOSE_MS = 90_000L
+        const val NIGHT_PAUSE_END_HOUR = 6
     }
 }

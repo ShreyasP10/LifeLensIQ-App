@@ -25,6 +25,7 @@ class SyncWorker(context: Context, params: WorkerParameters) :
 
     override suspend fun doWork(): Result {
         val repo = ServiceLocator.eventRepository()
+        repo.prune(EVENTS_RETENTION_MS)
         var syncedInThisRun = 0
         var uploaded = 0
 
@@ -44,15 +45,24 @@ class SyncWorker(context: Context, params: WorkerParameters) :
             if (batch.size < MAX_BATCH) break
         }
 
-        if (uploaded > 0) {
-            ServiceLocator.eventEmitter().emit(EventType.SYNC_STATUS.id, mapOf("batchUploaded" to uploaded))
+        // Pull events written by the web dashboard (same users/{uid}/events
+        // collection) so both app and website data appear together.
+        val downloaded = repo.downloadCloud()
+
+        if (uploaded > 0 || downloaded > 0) {
+            ServiceLocator.eventEmitter().emit(
+                EventType.SYNC_STATUS.id,
+                mapOf("batchUploaded" to uploaded, "downloaded" to downloaded)
+            )
         }
+        com.lifelensiq.app.widget.LifeLensIQWidgetProvider.refresh(applicationContext)
         return Result.success()
     }
 
     companion object {
         const val MAX_BATCH = 500
         const val WORK_NAME = "lifelensiq_sync"
+        const val EVENTS_RETENTION_MS = 90L * 24 * 60 * 60 * 1000
     }
 }
 

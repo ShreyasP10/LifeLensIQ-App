@@ -6,6 +6,7 @@ import com.lifelensiq.app.data.local.EventEntity
 import com.lifelensiq.app.domain.EventType
 import com.lifelensiq.app.domain.repository.EventRepository
 import com.lifelensiq.app.util.JsonUtil
+import com.lifelensiq.app.util.SettingsStore
 import com.lifelensiq.app.util.TimeUtils
 import com.lifelensiq.app.util.WebCategoryMapper
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +33,8 @@ data class ActivityUiState(
     val loading: Boolean = true,
     val totalMinutes: Long = 0,
     val categories: List<CategoryUsage> = emptyList(),
-    val topApps: List<AppUsageItem> = emptyList()
+    val topApps: List<AppUsageItem> = emptyList(),
+    val donutSlices: List<Pair<String, Long>> = emptyList()
 )
 
 /**
@@ -57,13 +59,14 @@ class ActivityViewModel(
     }
 
     private fun buildState(list: List<EventEntity>): ActivityUiState {
+        val overrides = SettingsStore.categoryOverrides()
         val byCategory = linkedMapOf<String, MutableList<AppUsageItem>>()
 
         list.forEach { event ->
             when (event.eventType) {
                 EventType.APP_SESSION.id -> {
                     val pkg = payloadString(event, "packageName")
-                    val category = WebCategoryMapper.categoryForPackage(pkg)
+                    val category = WebCategoryMapper.categoryForPackage(pkg, overrides)
                     val name = payloadString(event, "appName").takeIf { it.isNotBlank() } ?: pkg
                     byCategory.getOrPut(category) { mutableListOf() }.add(
                         AppUsageItem(
@@ -127,7 +130,8 @@ class ActivityViewModel(
             loading = false,
             totalMinutes = categories.sumOf { it.minutes },
             categories = categories,
-            topApps = topApps
+            topApps = topApps,
+            donutSlices = categories.map { it.category to it.minutes }.filter { it.second > 0 }
         )
     }
 

@@ -2,7 +2,6 @@ package com.lifelensiq.app.export
 
 import com.lifelensiq.app.data.local.EventEntity
 import com.lifelensiq.app.util.JsonUtil
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -12,12 +11,12 @@ import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
 
 /**
- * JSON exporter — envelope with events (payloads parsed to objects),
- * timetable, and metadata. NDJSON variant streams one event per line.
+ * JSON exporter — envelope with events (payloads parsed to objects) and
+ * metadata. NDJSON variant streams one event per line.
  */
 class JsonExporter(private val ndjson: Boolean = false) : Exporter {
 
-    override fun write(events: List<EventEntity>, timetable: List<Map<String, Any?>>, out: OutputStream) {
+    override fun write(events: List<EventEntity>, out: OutputStream) {
         val writer = OutputStreamWriter(out, StandardCharsets.UTF_8)
 
         if (ndjson) {
@@ -37,11 +36,6 @@ class JsonExporter(private val ndjson: Boolean = false) : Exporter {
             put("count", events.size)
             putJsonArray("events") {
                 events.forEach { add(eventToJson(it)) }
-            }
-            putJsonArray("timetable") {
-                timetable.forEach { slot ->
-                    add(JsonUtil.decodePayload(JsonUtil.encodePayload(slot)))
-                }
             }
         }
         writer.write(envelope.toString())

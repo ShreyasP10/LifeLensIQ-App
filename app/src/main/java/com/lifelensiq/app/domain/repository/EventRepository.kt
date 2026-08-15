@@ -24,4 +24,10 @@ interface EventRepository {
     suspend fun getSyncLog(): List<SyncLogEntity>
     suspend fun deleteAllLocal()
     suspend fun deleteAllCloud()
+
+    /** Pull all cloud events (app + web dashboard) into Room. Returns merged count. */
+    suspend fun downloadCloud(): Int
+
+    /** Delete synced events and sync-log rows older than [retentionMs]. */
+    suspend fun prune(retentionMs: Long)
 }

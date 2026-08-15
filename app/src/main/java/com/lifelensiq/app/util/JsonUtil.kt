@@ -36,7 +36,18 @@ object JsonUtil {
         else -> JsonPrimitive(toString())
     }
 
-    /** Flatten a payload map for Firestore (nulls removed; Firestore rejects null). */
+    /**
+     * Recursively remove null values for Firestore (it rejects null field
+     * values and empty arrays in documents).
+     */
     fun forFirestore(payload: Map<String, Any?>): Map<String, Any?> =
-        payload.filterValues { it != null }
+        stripNulls(payload) as Map<String, Any?>
+
+    private fun stripNulls(value: Any?): Any? = when (value) {
+        is Map<*, *> -> value.entries
+            .mapNotNull { (k, v) -> v?.let { stripNulls(it)?.let { k.toString() to it } } }
+            .toMap()
+        is Iterable<*> -> value.mapNotNull { stripNulls(it) }.takeIf { it.isNotEmpty() }
+        else -> value
+    }
 }

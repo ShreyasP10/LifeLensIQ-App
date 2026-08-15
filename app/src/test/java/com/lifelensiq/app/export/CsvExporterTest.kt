@@ -29,7 +29,7 @@ class CsvExporterTest {
     @Test
     fun `writes BOM and header`() {
         val out = ByteArrayOutputStream()
-        exporter.write(listOf(event()), emptyList(), out)
+        exporter.write(listOf(event()), out)
         val text = out.toString(StandardCharsets.UTF_8.name())
         assertTrue(text.startsWith("\uFEFF"))
         assertTrue(text.contains("schemaVersion,eventId,userId"))
@@ -38,7 +38,7 @@ class CsvExporterTest {
     @Test
     fun `escapes commas and quotes in payload`() {
         val out = ByteArrayOutputStream()
-        exporter.write(listOf(event(payload = """{"note":"a,b\"c","x":1}""")), emptyList(), out)
+        exporter.write(listOf(event(payload = """{"note":"a,b\"c","x":1}""")), out)
         val text = out.toString(StandardCharsets.UTF_8.name())
         assertTrue(text.contains("\"\"") || text.contains("\"a,b\"\"c\""))
     }
@@ -47,7 +47,7 @@ class CsvExporterTest {
     fun `writes one row per event`() {
         val events = (1..5).map { event(id = "evt-$it") }
         val out = ByteArrayOutputStream()
-        exporter.write(events, emptyList(), out)
+        exporter.write(events, out)
         val lines = out.toString(StandardCharsets.UTF_8.name()).split("\r\n").filter { it.isNotBlank() }
         assertEquals(6, lines.size) // header + 5
     }

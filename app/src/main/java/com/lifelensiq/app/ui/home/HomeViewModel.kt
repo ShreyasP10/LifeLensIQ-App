@@ -5,88 +5,112 @@ import androidx.lifecycle.viewModelScope
 import com.lifelensiq.app.data.local.EventEntity
 import com.lifelensiq.app.di.ServiceLocator
 import com.lifelensiq.app.domain.EventType
-import com.lifelensiq.app.domain.model.SlotType
-import com.lifelensiq.app.domain.model.TimetableSlot
 import com.lifelensiq.app.domain.repository.EventRepository
-import com.lifelensiq.app.domain.repository.TimetableRepository
 import com.lifelensiq.app.util.JsonUtil
 import com.lifelensiq.app.util.PermissionUtils
+import com.lifelensiq.app.util.SettingsStore
 import com.lifelensiq.app.util.TimeUtils
-import com.lifelensiq.app.util.TimetableSlotComparable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 data class HomeUiState(
-    val todaySlots: List<TimetableSlot> = emptyList(),
-    val nextSlot: TimetableSlot? = null,
     val pendingSync: Int = 0,
     val studyMinutesToday: Long = 0,
-    val appSessionsToday: Int = 0,
     val screenTimeMinutesToday: Long = 0,
-    val attendanceMarkedToday: Int = 0,
-    val classesToday: Int = 0,
-    val shortsToday: Int = 0,
+    val stepsToday: Long = 0,
+    val shortsToday: Long = 0,
+    val appSessionsToday: Int = 0,
     val usageAccessGranted: Boolean = false,
-    val timetableImported: Boolean = false
+    // Weekly chart (oldest first, 7 entries)
+    val weeklyStudy: List<Long> = emptyList(),
+    val weeklyScreen: List<Long> = emptyList(),
+    // Goals
+    val studyGoalMin: Int = 120,
+    val screenLimitMin: Int = 300,
+    // Productivity heatmap: date -> study minutes
+    val heatmap: Map<LocalDate, Long> = emptyMap(),
+    // Best day of the week
+    val bestDay: String? = null,
+    val bestDayMinutes: Long = 0
 )
 
 class HomeViewModel(
-    private val events: EventRepository,
-    private val timetable: TimetableRepository
+    private val events: EventRepository
 ) : ViewModel() {
-
-    private val today = TimeUtils.todayName()
-    private val todayStart = TimeUtils.todayEpochStart()
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            timetable.observeDay(today).collect { slots ->
-                val applicable = slots.filter { it.applicable }
-                _uiState.update {
-                    it.copy(
-                        todaySlots = applicable,
-                        timetableImported = slots.isNotEmpty(),
-                        classesToday = applicable.count { s -> s.type in SlotType.ATTENDABLE },
-                        nextSlot = TimeUtils.currentOrNext(
-                            applicable.map { slot -> slot.toComparable() },
-                            System.currentTimeMillis()
-                        )?.toSlot()
-                    )
-                }
-            }
-        }
-        viewModelScope.launch {
             events.observePendingCount().collect { pending ->
                 _uiState.update { it.copy(pendingSync = pending) }
             }
         }
         viewModelScope.launch {
-            events.observeEvents(todayStart, Long.MAX_VALUE).collect { eventsToday ->
-                val studyMs = eventsToday
+            val from = TimeUtils.todayEpochStart() - 90L * 24 * 60 * 60 * 1000
+            events.observeEvents(from, Long.MAX_VALUE).collect { all ->
+                val todayStart = TimeUtils.todayEpochStart()
+                val now = System.currentTimeMillis()
+
+                val todayEvents = all.filter { it.timestamp >= todayStart }
+                val studyMsToday = todayEvents
                     .filter { it.eventType == EventType.STUDY_SESSION.id }
-                    .sumOf { studyDuration(it) }
-                val appEvents = eventsToday.filter { it.eventType == EventType.APP_SESSION.id }
-                val screenMs = appEvents.sumOf { sessionDuration(it) }
-                val attendanceEvents = eventsToday.filter { it.eventType == EventType.CLASS_ATTENDANCE.id }
-                val shortsViews = eventsToday
-                    .filter { it.eventType == EventType.SHORT_VIDEO.id }
-                    .sumOf { event ->
-                        (JsonUtil.decodePayload(event.payloadJson)["views"] as? kotlinx.serialization.json.JsonPrimitive)
-                            ?.content?.toIntOrNull() ?: 0
+                    .sumOf { payloadLong(it, "durationMs") }
+                val appEvents = todayEvents.filter { it.eventType == EventType.APP_SESSION.id }
+                val screenMsToday = appEvents.sumOf { payloadLong(it, "durationMs") }
+
+                val weeklyStudy = mutableListOf<Long>()
+                val weeklyScreen = mutableListOf<Long>()
+                val heatmap = mutableMapOf<LocalDate, Long>()
+                for (day in 0 until 7) {
+                    val dayStart = TimeUtils.todayEpochStart() - (6 - day) * 86_400_000L
+                    val dayEnd = dayStart + 86_400_000L
+                    val dayEvents = all.filter { it.timestamp in dayStart until dayEnd }
+                    weeklyStudy.add(dayEvents.filter { it.eventType == EventType.STUDY_SESSION.id }
+                        .sumOf { payloadLong(it, "durationMs") } / 60_000)
+                    weeklyScreen.add(dayEvents.filter { it.eventType == EventType.APP_SESSION.id }
+                        .sumOf { payloadLong(it, "durationMs") } / 60_000)
+                }
+                // Heatmap: last 90 days of study minutes
+                val heatmapStart = LocalDate.now().minusDays(90)
+                all.groupBy {
+                    java.time.Instant.ofEpochMilli(it.timestamp)
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                }.forEach { (date, list) ->
+                    if (!date.isBefore(heatmapStart) && !date.isAfter(LocalDate.now())) {
+                        heatmap[date] = list.filter { it.eventType == EventType.STUDY_SESSION.id }
+                            .sumOf { payloadLong(it, "durationMs") } / 60_000
                     }
+                }
+
+                val bestIndex = weeklyStudy.withIndex().maxByOrNull { it.value }?.takeIf { it.value > 0 }
+                val bestDay = bestIndex?.let {
+                    LocalDate.now().minusDays((6 - it.index).toLong()).let { d ->
+                        "${dayLabel(d)} · ${formatMinutes(it.value)}"
+                    }
+                }
+
                 _uiState.update {
                     it.copy(
-                        studyMinutesToday = studyMs / 60_000,
+                        studyMinutesToday = studyMsToday / 60_000,
+                        screenTimeMinutesToday = screenMsToday / 60_000,
                         appSessionsToday = appEvents.size,
-                        screenTimeMinutesToday = screenMs / 60_000,
-                        attendanceMarkedToday = attendanceEvents.size,
-                        shortsToday = shortsViews
+                        stepsToday = todayEvents.filter { it.eventType == EventType.STEPS.id }
+                            .sumOf { payloadLong(it, "stepDelta") },
+                        shortsToday = todayEvents.filter { it.eventType == EventType.SHORT_VIDEO.id }
+                            .sumOf { payloadLong(it, "views") },
+                        weeklyStudy = weeklyStudy,
+                        weeklyScreen = weeklyScreen,
+                        heatmap = heatmap,
+                        bestDay = bestDay,
+                        bestDayMinutes = bestIndex?.value ?: 0,
+                        studyGoalMin = SettingsStore.studyGoalMin,
+                        screenLimitMin = SettingsStore.screenLimitMin
                     )
                 }
             }
@@ -96,17 +120,23 @@ class HomeViewModel(
         }
     }
 
-    private fun studyDuration(e: EventEntity): Long =
-        (JsonUtil.decodePayload(e.payloadJson)["durationMs"] as? kotlinx.serialization.json.JsonPrimitive)
+    private fun payloadLong(e: EventEntity, key: String): Long =
+        (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)
             ?.content?.toLongOrNull() ?: 0L
 
-    private fun sessionDuration(e: EventEntity): Long =
-        (JsonUtil.decodePayload(e.payloadJson)["durationMs"] as? kotlinx.serialization.json.JsonPrimitive)
-            ?.content?.toLongOrNull() ?: 0L
+    private fun dayLabel(date: LocalDate): String = when (date.dayOfWeek) {
+        java.time.DayOfWeek.MONDAY -> "Mon"
+        java.time.DayOfWeek.TUESDAY -> "Tue"
+        java.time.DayOfWeek.WEDNESDAY -> "Wed"
+        java.time.DayOfWeek.THURSDAY -> "Thu"
+        java.time.DayOfWeek.FRIDAY -> "Fri"
+        java.time.DayOfWeek.SATURDAY -> "Sat"
+        java.time.DayOfWeek.SUNDAY -> "Sun"
+    }
+
+    private fun formatMinutes(minutes: Long): String {
+        val h = minutes / 60
+        val m = minutes % 60
+        return if (h > 0) "${h}h ${m}m" else "${m}m"
+    }
 }
-
-private fun TimetableSlot.toComparable() = TimetableSlotComparable(
-    day = day, slotNo = slotNo, start = start, end = end,
-    subject = subject, subjectFull = subjectFull, room = room,
-    typeId = type.id, applicable = applicable
-)

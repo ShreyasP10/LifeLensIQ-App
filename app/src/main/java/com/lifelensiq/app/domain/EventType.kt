@@ -11,7 +11,6 @@ enum class EventType(val id: String) {
     STEPS("STEPS"),
     WAKE_UP("WAKE_UP"),
     SHORT_VIDEO("short_video"),
-    CLASS_ATTENDANCE("CLASS_ATTENDANCE"),
     STUDY_SESSION("STUDY_SESSION"),
     TRACKING_STATE("TRACKING_STATE"),
     SYNC_STATUS("SYNC_STATUS");
@@ -19,11 +18,4 @@ enum class EventType(val id: String) {
     companion object {
         fun from(id: String?): EventType? = entries.firstOrNull { it.id == id }
     }
-}
-
-enum class AttendanceStatus(val id: String) {
-    ATTENDED("ATTENDED"),
-    SKIPPED("SKIPPED"),
-    ONLINE("ONLINE"),
-    LATE("LATE")
 }

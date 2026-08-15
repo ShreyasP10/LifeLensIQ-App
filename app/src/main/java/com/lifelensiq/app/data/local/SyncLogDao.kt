@@ -13,6 +13,9 @@ interface SyncLogDao {
     @Query("SELECT * FROM sync_log ORDER BY id DESC LIMIT 20")
     suspend fun getRecent(): List<SyncLogEntity>
 
+    @Query("DELETE FROM sync_log WHERE syncedAt < :cutoff")
+    suspend fun deleteBefore(cutoff: Long): Int
+
     @Query("DELETE FROM sync_log")
     suspend fun deleteAll(): Int
 }
