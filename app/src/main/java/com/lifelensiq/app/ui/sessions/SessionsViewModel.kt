@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lifelensiq.app.domain.EventType
 import com.lifelensiq.app.domain.repository.EventRepository
 import com.lifelensiq.app.util.JsonUtil
-import com.lifelensiq.app.util.TimeUtils
+import com.lifelensiq.app.util.SettingsStore
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +26,13 @@ data class SessionUiState(
     val activeStartedAt: Long = 0L,
     val elapsedSeconds: Long = 0L,
     val history: List<SessionItem> = emptyList(),
-    val lastSummary: String? = null
+    val lastSummary: String? = null,
+    // Focus mode
+    val focusActive: Boolean = SettingsStore.focusActive,
+    val focusSubject: String = SettingsStore.focusSubject,
+    val focusStartedAt: Long = SettingsStore.focusStartMs,
+    val focusElapsedSeconds: Long = 0L,
+    val focusBlockedApps: Set<String> = SettingsStore.focusBlockedApps()
 )
 
 class SessionsViewModel(
@@ -37,9 +43,11 @@ class SessionsViewModel(
     val uiState: StateFlow<SessionUiState> = _uiState.asStateFlow()
 
     private var tickerJob: Job? = null
+    private var focusTickerJob: Job? = null
 
     init {
         loadHistory()
+        if (_uiState.value.focusActive) startFocusTicker()
     }
 
     private fun loadHistory() {
@@ -107,6 +115,104 @@ class SessionsViewModel(
                     elapsedSeconds = 0,
                     lastSummary = "Studied \"$subject\" for ${formatMinutes(durationMs / 60_000)}."
                 )
+            }
+            loadHistory()
+        }
+    }
+
+    // ---- Focus mode ----
+
+    fun startFocus(subject: String, blockedApps: Set<String>) {
+        val trimmed = subject.trim()
+        if (trimmed.isEmpty() || _uiState.value.focusActive) return
+        val now = System.currentTimeMillis()
+        SettingsStore.focusActive = true
+        SettingsStore.focusStartMs = now
+        SettingsStore.focusSubject = trimmed
+        SettingsStore.setFocusBlockedApps(blockedApps)
+        _uiState.update {
+            it.copy(
+                focusActive = true,
+                focusSubject = trimmed,
+                focusStartedAt = now,
+                focusElapsedSeconds = 0,
+                focusBlockedApps = blockedApps
+            )
+        }
+        startFocusTicker()
+    }
+
+    fun endFocus() {
+        val s = _uiState.value
+        if (!s.focusActive) return
+        val now = System.currentTimeMillis()
+        val durationMs = now - s.focusStartedAt
+        val subject = s.focusSubject.ifBlank { "Focus session" }
+        SettingsStore.focusActive = false
+        focusTickerJob?.cancel()
+        viewModelScope.launch {
+            events.emit(
+                EventType.STUDY_SESSION.id,
+                mapOf(
+                    "subject" to subject,
+                    "startedAt" to s.focusStartedAt,
+                    "endedAt" to now,
+                    "durationMs" to durationMs,
+                    "locationType" to "FOCUS"
+                )
+            )
+            _uiState.update {
+                it.copy(
+                    focusActive = false,
+                    focusElapsedSeconds = 0,
+                    lastSummary = "Focus session \"$subject\" — ${formatMinutes(durationMs / 60_000)} of distraction-free work."
+                )
+            }
+            loadHistory()
+        }
+    }
+
+    fun toggleFocusApp(pkg: String) {
+        val current = _uiState.value.focusBlockedApps.toMutableSet()
+        if (!current.add(pkg)) current.remove(pkg)
+        SettingsStore.setFocusBlockedApps(current)
+        _uiState.update { it.copy(focusBlockedApps = current) }
+    }
+
+    private fun startFocusTicker() {
+        focusTickerJob?.cancel()
+        focusTickerJob = viewModelScope.launch {
+            while (_uiState.value.focusActive) {
+                delay(1000)
+                val s = _uiState.value
+                if (s.focusActive) {
+                    _uiState.update {
+                        it.copy(focusElapsedSeconds = (System.currentTimeMillis() - s.focusStartedAt) / 1000)
+                    }
+                }
+            }
+        }
+    }
+
+    // ---- Manual logging ----
+
+    fun logStudyManually(subject: String, minutes: Int) {
+        val trimmed = subject.trim()
+        if (trimmed.isEmpty() || minutes <= 0) return
+        val now = System.currentTimeMillis()
+        viewModelScope.launch {
+            events.emit(
+                EventType.STUDY_SESSION.id,
+                mapOf(
+                    "subject" to trimmed,
+                    "startedAt" to (now - minutes * 60_000L),
+                    "endedAt" to now,
+                    "durationMs" to minutes * 60_000L,
+                    "locationType" to "MANUAL"
+                )
+            )
+            _uiState.update {
+                it.copy(lastSummary = "Logged \"$trimmed\" for ${formatMinutes(minutes.toLong())}.")
             }
             loadHistory()
         }

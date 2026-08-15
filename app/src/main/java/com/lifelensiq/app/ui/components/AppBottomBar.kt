@@ -1,6 +1,7 @@
 package com.lifelensiq.app.ui.components
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
@@ -20,6 +21,7 @@ val BOTTOM_TABS = listOf(
     BottomTabItem(Routes.HOME, "Home", Icons.Filled.Home),
     BottomTabItem(Routes.ACTIVITY, "Activity", Icons.Filled.List),
     BottomTabItem(Routes.SESSIONS, "Sessions", Icons.Filled.PlayArrow),
+    BottomTabItem(Routes.TRENDS, "Trends", Icons.Filled.DateRange),
     BottomTabItem(Routes.SETTINGS, "Settings", Icons.Filled.Settings)
 )
 

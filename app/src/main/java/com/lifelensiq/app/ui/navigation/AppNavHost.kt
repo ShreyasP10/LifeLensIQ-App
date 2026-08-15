@@ -47,6 +47,8 @@ import com.lifelensiq.app.ui.sessions.SessionsScreen
 import com.lifelensiq.app.ui.sessions.SessionsViewModel
 import com.lifelensiq.app.ui.settings.SettingsScreen
 import com.lifelensiq.app.ui.settings.SettingsViewModel
+import com.lifelensiq.app.ui.trends.TrendsScreen
+import com.lifelensiq.app.ui.trends.TrendsViewModel
 import com.lifelensiq.app.util.SettingsStore
 import kotlinx.coroutines.delay
 
@@ -56,6 +58,7 @@ object Routes {
     const val ACTIVITY = "activity"
     const val CATEGORY = "category/{category}"
     const val SESSIONS = "sessions"
+    const val TRENDS = "trends"
     const val EXPORT = "export"
     const val SETTINGS = "settings"
     const val CATEGORY_OVERRIDES = "category-overrides"
@@ -63,7 +66,7 @@ object Routes {
     fun category(name: String): String = "category/${Uri.encode(name)}"
 }
 
-private val TAB_ROUTES = listOf(Routes.HOME, Routes.ACTIVITY, Routes.SESSIONS, Routes.SETTINGS)
+private val TAB_ROUTES = listOf(Routes.HOME, Routes.ACTIVITY, Routes.SESSIONS, Routes.TRENDS, Routes.SETTINGS)
 
 /** Screens with a back arrow instead of a selected bottom tab. */
 private val DETAIL_ROUTES = listOf(Routes.CATEGORY, Routes.EXPORT, Routes.CATEGORY_OVERRIDES)
@@ -178,7 +181,10 @@ fun AppNavHost(
 
             composable(Routes.ACTIVITY) {
                 val vm: ActivityViewModel = viewModel {
-                    ActivityViewModel(ServiceLocator.eventRepository())
+                    ActivityViewModel(
+                        ServiceLocator.eventRepository(),
+                        com.lifelensiq.app.util.DeviceIdProvider.get(ServiceLocator.context())
+                    )
                 }
                 ActivityScreen(vm, onCategoryClick = { category ->
                     navController.navigate(Routes.category(category))
@@ -201,6 +207,13 @@ fun AppNavHost(
                     SessionsViewModel(ServiceLocator.eventRepository())
                 }
                 SessionsScreen(vm)
+            }
+
+            composable(Routes.TRENDS) {
+                val vm: TrendsViewModel = viewModel {
+                    TrendsViewModel(ServiceLocator.eventRepository())
+                }
+                TrendsScreen(vm)
             }
 
             composable(Routes.EXPORT) {
@@ -234,6 +247,7 @@ private fun topBarTitleFor(route: String?): String = when (route) {
     Routes.HOME -> "LifeLens IQ"
     Routes.ACTIVITY -> "Today's Activity"
     Routes.SESSIONS -> "Study Sessions"
+    Routes.TRENDS -> "Trends"
     Routes.SETTINGS -> "Settings"
     Routes.EXPORT -> "Export Data"
     Routes.CATEGORY_OVERRIDES -> "App Categories"

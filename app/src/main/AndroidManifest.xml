@@ -32,6 +32,12 @@
             android:exported="false"
             android:theme="@style/Theme.LifeLensIQ" />
 
+        <activity
+            android:name=".tracking.FocusBlockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.LifeLensIQ" />
+
         <service
             android:name=".tracking.LifeLensIQTrackerService"
             android:exported="false"

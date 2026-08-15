@@ -92,4 +92,37 @@ object SettingsStore {
     fun markAlertFired(key: String, today: String = java.time.LocalDate.now().toString()) {
         prefs(ServiceLocator.context()).edit().putString("alert_last_fired_$key", today).apply()
     }
+
+    // ---- Focus mode ----
+    var focusActive: Boolean
+        get() = prefs(ServiceLocator.context()).getBoolean("focus_active", false)
+        set(v) = prefs(ServiceLocator.context()).edit().putBoolean("focus_active", v).apply()
+
+    var focusStartMs: Long
+        get() = prefs(ServiceLocator.context()).getLong("focus_start_ms", 0L)
+        set(v) = prefs(ServiceLocator.context()).edit().putLong("focus_start_ms", v).apply()
+
+    var focusSubject: String
+        get() = prefs(ServiceLocator.context()).getString("focus_subject", "") ?: ""
+        set(v) = prefs(ServiceLocator.context()).edit().putString("focus_subject", v).apply()
+
+    fun focusBlockedApps(): Set<String> {
+        val raw = prefs(ServiceLocator.context()).getString("focus_blocked_apps", null) ?: return emptySet()
+        return raw.split(";").filter { it.isNotBlank() }.toSet()
+    }
+
+    fun setFocusBlockedApps(apps: Set<String>) {
+        prefs(ServiceLocator.context()).edit()
+            .putString("focus_blocked_apps", apps.joinToString(";"))
+            .apply()
+    }
+
+    // ---- Morning report ----
+    var morningReportEnabled: Boolean
+        get() = prefs(ServiceLocator.context()).getBoolean("morning_report_enabled", true)
+        set(v) = prefs(ServiceLocator.context()).edit().putBoolean("morning_report_enabled", v).apply()
+
+    var lastMorningReportDate: String
+        get() = prefs(ServiceLocator.context()).getString("last_morning_report_date", "") ?: ""
+        set(v) = prefs(ServiceLocator.context()).edit().putString("last_morning_report_date", v).apply()
 }

@@ -35,7 +35,12 @@ data class HomeUiState(
     val heatmap: Map<LocalDate, Long> = emptyMap(),
     // Best day of the week
     val bestDay: String? = null,
-    val bestDayMinutes: Long = 0
+    val bestDayMinutes: Long = 0,
+    // Wake & sleep
+    val pickupsToday: Int = 0,
+    val firstWake: String? = null,
+    val lastShutdown: String? = null,
+    val sleepEstimate: String? = null
 )
 
 class HomeViewModel(
@@ -95,6 +100,23 @@ class HomeViewModel(
                     }
                 }
 
+                // Wake & sleep: pickups, first wake, last shutdown, sleep estimate
+                val screenOnToday = todayEvents.filter { it.eventType == EventType.SCREEN_ON.id }
+                    .sortedBy { it.timestamp }
+                val screenOffToday = todayEvents.filter { it.eventType == EventType.SCREEN_OFF.id }
+                    .sortedByDescending { it.timestamp }
+                val firstWake = screenOnToday.firstOrNull { hourOf(it.timestamp) >= 5 }?.timestamp?.let(::timeLabel)
+                val lastShutdown = screenOffToday.firstOrNull()?.timestamp?.let(::timeLabel)
+                val yestNoon = todayStart - 12 * 3600_000L
+                val bedtime = all.filter {
+                    it.eventType == EventType.SCREEN_OFF.id && it.timestamp in yestNoon until todayStart
+                }.maxOfOrNull { it.timestamp }
+                val wake = screenOnToday.filter { hourOf(it.timestamp) >= 4 }.minOfOrNull { it.timestamp }
+                val sleepMs = if (bedtime != null && wake != null) wake - bedtime else null
+                val sleepEstimate = sleepMs
+                    ?.takeIf { it in 2_700_000L..14 * 3600_000L }
+                    ?.let { formatMinutes(it / 60_000) }
+
                 _uiState.update {
                     it.copy(
                         studyMinutesToday = studyMsToday / 60_000,
@@ -110,7 +132,11 @@ class HomeViewModel(
                         bestDay = bestDay,
                         bestDayMinutes = bestIndex?.value ?: 0,
                         studyGoalMin = SettingsStore.studyGoalMin,
-                        screenLimitMin = SettingsStore.screenLimitMin
+                        screenLimitMin = SettingsStore.screenLimitMin,
+                        pickupsToday = screenOnToday.size,
+                        firstWake = firstWake,
+                        lastShutdown = lastShutdown,
+                        sleepEstimate = sleepEstimate
                     )
                 }
             }
@@ -123,6 +149,13 @@ class HomeViewModel(
     private fun payloadLong(e: EventEntity, key: String): Long =
         (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)
             ?.content?.toLongOrNull() ?: 0L
+
+    private fun hourOf(ts: Long): Int =
+        java.time.Instant.ofEpochMilli(ts).atZone(java.time.ZoneId.systemDefault()).hour
+
+    private fun timeLabel(ts: Long): String =
+        java.time.Instant.ofEpochMilli(ts).atZone(java.time.ZoneId.systemDefault())
+            .toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("h:mm a"))
 
     private fun dayLabel(date: LocalDate): String = when (date.dayOfWeek) {
         java.time.DayOfWeek.MONDAY -> "Mon"

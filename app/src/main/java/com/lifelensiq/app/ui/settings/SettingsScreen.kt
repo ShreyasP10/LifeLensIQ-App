@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
@@ -57,6 +56,19 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
         if (granted) {
             vm.restartTracking()
         }
+    }
+
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        vm.refreshNotifications()
+        if (granted) {
+            vm.restartTracking()
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        vm.refreshAll()
     }
 
     var studyGoal by remember { mutableStateOf(state.studyGoalMin.toString()) }
@@ -113,30 +125,49 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
 
         Card {
             Column(Modifier.padding(16.dp)) {
-                Text("Tracking", style = MaterialTheme.typography.titleMedium)
+                Text("Permissions", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Usage access: " + if (state.usageAccessGranted) "GRANTED" else "NOT GRANTED — app usage is not recorded",
-                    color = if (state.usageAccessGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
+                    "Grant or revoke every permission from here — no need to hunt through system Settings.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { vm.openUsageAccessSettings(context) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Lock, contentDescription = null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Open Usage Access Settings")
-                }
-                OutlinedButton(
-                    onClick = { vm.refreshUsageAccess() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Refresh, contentDescription = null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Re-check permission")
-                }
+                PermissionRow(
+                    title = "Usage access",
+                    description = "Records which apps you open",
+                    granted = state.usageAccessGranted,
+                    onGrant = { vm.openUsageAccessSettings(context) },
+                    onRevoke = { vm.openUsageAccessSettings(context) }
+                )
+                PermissionRow(
+                    title = "Notifications",
+                    description = "Daily summary, morning report, alerts",
+                    granted = state.notificationsEnabled,
+                    onGrant = { notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                    onRevoke = { vm.revokeNotifications(context) }
+                )
+                PermissionRow(
+                    title = "Activity recognition (steps)",
+                    description = "Counts steps walked",
+                    granted = state.stepsPermissionGranted,
+                    onGrant = { stepPermission.launch(Manifest.permission.ACTIVITY_RECOGNITION) },
+                    onRevoke = { vm.revokeStepsPermission(context) }
+                )
+                PermissionRow(
+                    title = "Accessibility (Reels & Shorts)",
+                    description = "Detects short-form video (optional)",
+                    granted = state.shortsDetectorEnabled,
+                    onGrant = { vm.openAccessibilitySettings(context) },
+                    onRevoke = { vm.openAccessibilitySettings(context) }
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Usage access and accessibility are Android system-level — tapping Grant/Revoke opens the exact system page for you.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = { vm.restartTracking() },
                     modifier = Modifier.fillMaxWidth()
@@ -188,6 +219,7 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
                 ) { Text("Save goals") }
                 Spacer(Modifier.height(8.dp))
                 ToggleRow("Daily summary (9 PM)", state.dailySummaryEnabled, vm::setDailySummary)
+                ToggleRow("Morning report (first wake)", state.morningReportEnabled, vm::setMorningReport)
                 ToggleRow("Screen-limit alert", state.screenLimitAlertEnabled, vm::setScreenLimitAlert)
                 ToggleRow("Shorts nudge", state.shortsNudgeEnabled, vm::setShortsNudge)
                 ToggleRow("Bedtime reminder (10:30 PM)", state.bedtimeReminderEnabled, vm::setBedtimeReminder)
@@ -211,57 +243,6 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
                     Icon(Icons.Filled.List, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Edit app categories")
-                }
-            }
-        }
-
-        Card {
-            Column(Modifier.padding(16.dp)) {
-                Text("Steps", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Step tracking: " + if (state.stepsPermissionGranted) "ENABLED" else "DISABLED — grant activity recognition to collect step data",
-                    color = if (state.stepsPermissionGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { stepPermission.launch(Manifest.permission.ACTIVITY_RECOGNITION) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (state.stepsPermissionGranted) "Re-check step permission" else "Enable step tracking")
-                }
-            }
-        }
-
-        Card {
-            Column(Modifier.padding(16.dp)) {
-                Text("Reels & Shorts", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Counts Instagram/Facebook Reels and YouTube Shorts viewed (accessibility heuristic). " +
-                        if (state.shortsDetectorEnabled) "ENABLED" else "DISABLED — enable it to track short-form video on your phone.",
-                    color = if (state.shortsDetectorEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { vm.openAccessibilitySettings(context) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (state.shortsDetectorEnabled) "Manage in Accessibility settings" else "Enable Reels & Shorts detection")
-                }
-                OutlinedButton(
-                    onClick = { vm.refreshShortsDetector() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Refresh, contentDescription = null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Re-check status")
                 }
             }
         }
@@ -336,5 +317,38 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+private fun PermissionRow(
+    title: String,
+    description: String,
+    granted: Boolean,
+    onGrant: () -> Unit,
+    onRevoke: () -> Unit
+) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                if (granted) "GRANTED" else "OFF",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = onGrant) { Text("Grant") }
+            TextButton(onClick = onRevoke) { Text("Revoke", color = MaterialTheme.colorScheme.error) }
+        }
     }
 }
