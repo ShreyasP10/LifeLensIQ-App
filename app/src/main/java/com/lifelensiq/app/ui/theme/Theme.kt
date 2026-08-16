@@ -11,60 +11,72 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-private val Brand = Color(0xFF1A237E)
-private val BrandLight = Color(0xFF3D5AFE)
-private val BrandDark = Color(0xFF7986CB)
-private val TealAccent = Color(0xFF00897B)
-private val TealAccentDark = Color(0xFF4DB6AC)
+private val Brand = Color(0xFF4F46E5) // Modern Indigo
+private val BrandLight = Color(0xFF818CF8)
+private val BrandDark = Color(0xFF3730A3)
+private val Accent = Color(0xFF10B981) // Emerald
+private val AccentDark = Color(0xFF059669)
 
 private val LightColors = lightColorScheme(
     primary = Brand,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFDDE1FF),
-    onPrimaryContainer = Color(0xFF101B5E),
-    secondary = TealAccent,
+    primaryContainer = Color(0xFFEEF2FF),
+    onPrimaryContainer = Color(0xFF3730A3),
+    secondary = Accent,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFB2DFDB),
-    onSecondaryContainer = Color(0xFF00332E),
-    tertiary = BrandLight,
-    onTertiary = Color.White,
-    background = Color(0xFFF4F6F8),
-    onBackground = Color(0xFF1A1C20),
+    secondaryContainer = Color(0xFFD1FAE5),
+    onSecondaryContainer = Color(0xFF065F46),
+    background = Color(0xFFF9FAFB),
+    onBackground = Color(0xFF111827),
     surface = Color.White,
-    onSurface = Color(0xFF1A1C20),
-    surfaceVariant = Color(0xFFE7E8EE),
-    onSurfaceVariant = Color(0xFF44474F),
-    outline = Color(0xFF74777F),
-    error = Color(0xFFE53935),
+    onSurface = Color(0xFF111827),
+    surfaceVariant = Color(0xFFF3F4F6),
+    onSurfaceVariant = Color(0xFF4B5563),
+    outline = Color(0xFFD1D5DB),
+    error = Color(0xFFEF4444),
     onError = Color.White
 )
 
 private val DarkColors = darkColorScheme(
-    primary = BrandDark,
-    onPrimary = Color(0xFF101B5E),
-    primaryContainer = Color(0xFF2A3485),
-    onPrimaryContainer = Color(0xFFDDE1FF),
-    secondary = TealAccentDark,
-    onSecondary = Color(0xFF00332E),
-    secondaryContainer = Color(0xFF00504A),
-    onSecondaryContainer = Color(0xFFB2DFDB),
-    tertiary = BrandLight,
-    onTertiary = Color.White,
-    background = Color(0xFF121316),
-    onBackground = Color(0xFFE3E2E6),
-    surface = Color(0xFF1C1D22),
-    onSurface = Color(0xFFE3E2E6),
-    surfaceVariant = Color(0xFF44474F),
-    onSurfaceVariant = Color(0xFFC4C6CF),
-    outline = Color(0xFF8E9199),
-    error = Color(0xFFFF8A80),
-    onError = Color(0xFF690005)
+    primary = BrandLight,
+    onPrimary = Color(0xFF312E81),
+    primaryContainer = Color(0xFF3730A3),
+    onPrimaryContainer = Color(0xFFEEF2FF),
+    secondary = Accent,
+    onSecondary = Color(0xFF064E3B),
+    secondaryContainer = Color(0xFF065F46),
+    onSecondaryContainer = Color(0xFFD1FAE5),
+    background = Color(0xFF0F172A),
+    onBackground = Color(0xFFF8FAFC),
+    surface = Color(0xFF1E293B),
+    onSurface = Color(0xFFF8FAFC),
+    surfaceVariant = Color(0xFF334155),
+    onSurfaceVariant = Color(0xFF94A3B8),
+    outline = Color(0xFF475569),
+    error = Color(0xFFF87171),
+    onError = Color(0xFF7F1D1D)
 )
 
 private val AppTypography = Typography(
-    titleLarge = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp),
-    titleMedium = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 17.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp)
+    titleLarge = TextStyle(
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 24.sp,
+        letterSpacing = (-0.5).sp
+    ),
+    titleMedium = TextStyle(
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+        letterSpacing = (-0.2).sp
+    ),
+    bodyMedium = TextStyle(
+        fontSize = 15.sp,
+        lineHeight = 22.sp,
+        color = Color.Unspecified
+    ),
+    labelSmall = TextStyle(
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp
+    )
 )
 
 @Composable

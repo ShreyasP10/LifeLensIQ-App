@@ -1,12 +1,19 @@
 package com.lifelensiq.app.ui.navigation
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -16,6 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -71,17 +80,19 @@ private val TAB_ROUTES = listOf(Routes.HOME, Routes.ACTIVITY, Routes.SESSIONS, R
 /** Screens with a back arrow instead of a selected bottom tab. */
 private val DETAIL_ROUTES = listOf(Routes.CATEGORY, Routes.EXPORT, Routes.CATEGORY_OVERRIDES)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     initialRoute: String? = null
 ) {
-
     val authRepo = ServiceLocator.authRepository()
     val authState by authRepo.state.collectAsState()
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route
     var onboarded by remember { mutableStateOf(SettingsStore.onboardingDone) }
+    
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     // First launch: walk through the onboarding pages before anything else.
     if (!onboarded) {
@@ -94,11 +105,10 @@ fun AppNavHost(
         return
     }
 
-    // Don't mount the NavHost until auth resolves: otherwise the login
-    // screen flashes for a frame on cold start with a restored session.
+    // Don't mount the NavHost until auth resolves
     if (authState is AuthState.Loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
         return
     }
@@ -114,7 +124,6 @@ fun AppNavHost(
             is AuthState.LoggedOut -> Routes.LOGIN
             else -> return@LaunchedEffect
         }
-        // Cold start: the NavHost graph may not be attached yet — wait for it.
         while (navController.graph.findNode(target) == null) {
             delay(50)
         }
@@ -130,6 +139,7 @@ fun AppNavHost(
     val showBack = currentRoute in DETAIL_ROUTES
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             if (showBars) {
                 AppTopBar(
@@ -137,10 +147,14 @@ fun AppNavHost(
                         if (currentRoute == Routes.CATEGORY) {
                             CategoryTitle(categoryName ?: "Category")
                         } else {
-                            Text(topBarTitleFor(currentRoute))
+                            Text(
+                                text = topBarTitleFor(currentRoute),
+                                style = MaterialTheme.typography.titleLarge
+                            )
                         }
                     },
-                    onBack = if (showBack) ({ navController.popBackStack() }) else null
+                    onBack = if (showBack) ({ navController.popBackStack() }) else null,
+                    scrollBehavior = scrollBehavior
                 )
             }
         },
@@ -164,7 +178,31 @@ fun AppNavHost(
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier.padding(padding),
+            enterTransition = {
+                fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(300)
+                )
+            },
+            exitTransition = {
+                fadeOut(animationSpec = tween(300)) + slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(300)
+                )
+            },
+            popEnterTransition = {
+                fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(300)
+                )
+            },
+            popExitTransition = {
+                fadeOut(animationSpec = tween(300)) + slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(300)
+                )
+            }
         ) {
 
             composable(Routes.LOGIN) {

@@ -12,12 +12,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -51,75 +52,78 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Header
-        Column {
-            Text(greeting(), style = MaterialTheme.typography.titleLarge)
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
             Text(
-                LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy")),
-                style = MaterialTheme.typography.bodyMedium,
+                text = greeting(),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM")),
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         if (!state.usageAccessGranted) {
             BannerCard(
-                title = "Usage access not granted",
-                body = "App usage is not being recorded. Enable it to start collecting data.",
-                action = "Fix in Settings",
+                title = "Permission Required",
+                body = "Usage access is needed to track your app activity automatically.",
+                action = "Grant Access",
                 onClick = { nav.navigate(Routes.SETTINGS) }
             )
         }
 
+        Text("Overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Study", "${state.studyMinutesToday}m", CategoryColors.STUDY, Modifier.weight(1f))
-            StatCard("Screen", "${state.screenTimeMinutesToday}m", CategoryColors.PRODUCTIVITY, Modifier.weight(1f))
+            StatCard("Study Time", "${state.studyMinutesToday}m", CategoryColors.STUDY, Modifier.weight(1f))
+            StatCard("Screen Time", "${state.screenTimeMinutesToday}m", CategoryColors.PRODUCTIVITY, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Shorts/Reels", state.shortsToday.toString(), CategoryColors.SHORT_FORM, Modifier.weight(1f))
+            StatCard("Shorts", state.shortsToday.toString(), CategoryColors.SHORT_FORM, Modifier.weight(1f))
             StatCard("Steps", state.stepsToday.toString(), CategoryColors.UTILITIES, Modifier.weight(1f))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Sessions", state.appSessionsToday.toString(), CategoryColors.ENTERTAINMENT, Modifier.weight(1f))
-            StatCard("Pending sync", state.pendingSync.toString(), CategoryColors.OTHER, Modifier.weight(1f))
-        }
 
-        // Wake & sleep
-        Card {
+        // Wake & Sleep
+        Text("Rest & Wake", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("Wake & sleep", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "First screen-on and last screen-off of the day — every wake and shutdown is counted.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     StatCard("Pickups", state.pickupsToday.toString(), CategoryColors.OTHER, Modifier.weight(1f))
-                    StatCard("First wake", state.firstWake ?: "—", CategoryColors.STUDY, Modifier.weight(1f))
+                    StatCard("First Wake", state.firstWake ?: "—", CategoryColors.STUDY, Modifier.weight(1f))
                 }
+                Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard("Last shutdown", state.lastShutdown ?: "—", CategoryColors.UTILITIES, Modifier.weight(1f))
-                    StatCard("Sleep est.", state.sleepEstimate ?: "—", CategoryColors.ENTERTAINMENT, Modifier.weight(1f))
+                    StatCard("Last Sleep", state.lastShutdown ?: "—", CategoryColors.UTILITIES, Modifier.weight(1f))
+                    StatCard("Sleep Est.", state.sleepEstimate ?: "—", CategoryColors.ENTERTAINMENT, Modifier.weight(1f))
                 }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    if (state.sleepEstimate != null)
+                    text = if (state.sleepEstimate != null)
                         "Estimated from last night's shutdown to this morning's first wake."
-                    else "Sleep estimate appears after you wake up — it's your last shutdown until first wake.",
-                    style = MaterialTheme.typography.bodySmall,
+                    else "Sleep estimate will appear after your first wake-up.",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
         // Daily goals
-        Card {
+        Text("Daily Goals", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("Daily goals", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -127,14 +131,14 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
                     ProgressRing(
                         progress = state.studyMinutesToday.toFloat() / state.studyGoalMin.coerceAtLeast(1),
                         valueLabel = "${state.studyMinutesToday}/${state.studyGoalMin}m",
-                        subLabel = "Study goal",
+                        subLabel = "Study",
                         color = CategoryColors.STUDY
                     )
                     ProgressRing(
                         progress = (state.screenTimeMinutesToday.toFloat() / state.screenLimitMin.coerceAtLeast(1))
                             .coerceAtMost(1f),
                         valueLabel = "${state.screenTimeMinutesToday}/${state.screenLimitMin}m",
-                        subLabel = "Screen limit",
+                        subLabel = "Screen",
                         color = CategoryColors.SHORT_FORM
                     )
                 }
@@ -142,83 +146,108 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
         }
 
         // Weekly trend
-        Card {
+        Text("Weekly Trend", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("This week", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text(
+                        "Study vs Screen",
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     state.bestDay?.let { best ->
                         Text(
                             "Best: $best",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = CategoryColors.STUDY
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 WeeklyBarChart(state.weeklyStudy, state.weeklyScreen)
             }
         }
 
-        // Productivity heatmap (same calendar the website shows)
-        Card {
+        // Productivity heatmap
+        Text("Productivity Calendar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
             Column(Modifier.padding(16.dp)) {
                 Text(
-                    "Productivity calendar",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    "Study minutes per day — app + website data combined",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Consistency heatmap (last 3 months)",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 StreakHeatmap(state.heatmap)
             }
         }
 
-        Card(
+        Spacer(Modifier.height(8.dp))
+
+        QuickAction(
+            label = "Start Study Session",
+            icon = androidx.compose.material.icons.Icons.Rounded.PlayArrow,
+            onClick = { nav.navigate(Routes.SESSIONS) },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        ElevatedCard(
             onClick = { nav.navigate(Routes.ACTIVITY) },
-            colors = CardDefaults.cardColors(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.elevatedCardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
+            ),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
         ) {
             Row(
-                Modifier.padding(16.dp),
+                Modifier.padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Filled.List,
+                    androidx.compose.material.icons.Icons.AutoMirrored.Rounded.List,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(28.dp)
                 )
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(16.dp))
                 Column {
                     Text(
-                        "Today's Activity",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        "Detailed Activity",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "See time by category — Study, DSA, Timepass, Shorts & more",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        "Breakdown by apps and categories",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                 }
             }
         }
 
-        QuickAction(
-            label = "Study Session",
-            icon = Icons.Filled.PlayArrow,
-            onClick = { nav.navigate(Routes.SESSIONS) },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedButton(onClick = { nav.navigate(Routes.EXPORT) }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Filled.Share, contentDescription = null, Modifier.size(18.dp))
+        OutlinedButton(
+            onClick = { nav.navigate(Routes.EXPORT) },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Icon(androidx.compose.material.icons.Icons.Rounded.Share, contentDescription = null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Export Data (CSV / JSON / NDJSON)")
+            Text("Export Your Data")
         }
+        
+        Spacer(Modifier.height(16.dp))
     }
 }
 

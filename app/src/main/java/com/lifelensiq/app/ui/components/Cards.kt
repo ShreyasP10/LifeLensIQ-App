@@ -25,6 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,7 +37,12 @@ import androidx.compose.ui.unit.sp
 /** Error-style banner for setup warnings (e.g. usage access not granted). */
 @Composable
 fun BannerCard(title: String, body: String, action: String, onClick: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        modifier = Modifier.semantics {
+            contentDescription = "$title: $body. $action"
+        }
+    ) {
         Column(Modifier.padding(12.dp)) {
             Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
             Text(body, fontSize = 12.sp, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -47,18 +57,37 @@ fun BannerCard(title: String, body: String, action: String, onClick: () -> Unit)
 /** Labeled metric card with a colored dot (study minutes, shorts, …). */
 @Composable
 fun StatCard(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Card(
+        modifier = modifier.semantics {
+            contentDescription = "$label: $value"
+        },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = MaterialTheme.shapes.large
+    ) {
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
                 Modifier
-                    .size(10.dp)
+                    .size(12.dp)
                     .clip(CircleShape)
                     .background(color)
+                    .semantics { contentDescription = "" } // Decorative dot
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column {
-                Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    value,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -74,18 +103,33 @@ fun QuickAction(
 ) {
     Surface(
         onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = modifier.height(72.dp)
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = modifier
+            .height(80.dp)
+            .clearAndSetSemantics {
+                contentDescription = label
+                role = Role.Button
+            },
+        tonalElevation = 2.dp
     ) {
-        Column(
-            Modifier.fillMaxSize().padding(12.dp),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Start
         ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-            Spacer(Modifier.height(6.dp))
-            Text(label, color = MaterialTheme.colorScheme.onSecondaryContainer, fontWeight = FontWeight.SemiBold)
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(Modifier.width(16.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         }
     }
 }

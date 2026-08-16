@@ -11,7 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,25 +37,34 @@ fun TrendsScreen(vm: TrendsViewModel) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             PERIODS.forEach { (days, label) ->
                 FilterChip(
                     selected = state.periodDays == days,
                     onClick = { vm.setPeriod(days) },
-                    label = { Text(label) }
+                    label = { Text(label) },
+                    shape = MaterialTheme.shapes.medium
                 )
             }
         }
 
-        Card {
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
             Column(Modifier.padding(16.dp)) {
                 Text(
                     "Screen time — last ${periodLabel(state.periodDays)}",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 SingleBarChart(
                     values = state.chartValues,
                     labels = state.chartLabels,
@@ -63,13 +73,18 @@ fun TrendsScreen(vm: TrendsViewModel) {
             }
         }
 
-        Card {
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
             Column(Modifier.padding(16.dp)) {
                 Text(
-                    "Last ${periodLabel(state.periodDays)}",
-                    style = MaterialTheme.typography.titleMedium
+                    "Overview — Last ${periodLabel(state.periodDays)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 TrendRow("Screen time", formatMinutes(state.screenMin), CategoryColors.PRODUCTIVITY)
                 TrendRow("Study time", formatMinutes(state.studyMin), CategoryColors.STUDY)
                 TrendRow("Steps", state.steps.toString(), CategoryColors.UTILITIES)
@@ -78,16 +93,24 @@ fun TrendsScreen(vm: TrendsViewModel) {
             }
         }
 
-        Card {
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("This month vs last month", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "This month vs last month",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Current month (to today) vs the full previous month.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 CompareRow("Study", state.monthStudy, state.prevStudy, CategoryColors.STUDY)
                 CompareRow("Screen", state.monthScreen, state.prevScreen, CategoryColors.PRODUCTIVITY)
                 CompareRow("Steps", state.monthSteps, state.prevSteps, CategoryColors.UTILITIES)
@@ -95,14 +118,22 @@ fun TrendsScreen(vm: TrendsViewModel) {
             }
         }
 
-        Card {
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("Charging discipline (last 7 days)", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Charging discipline (last 7 days)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(12.dp))
                 TrendRow("Charge sessions", state.chargeSessions.toString(), CategoryColors.UTILITIES)
                 TrendRow("Avg charge time", if (state.chargeAvgMin > 0) formatMinutes(state.chargeAvgMin) else "—", CategoryColors.UTILITIES)
                 TrendRow("Overnight charges", state.chargeOvernight.toString(), CategoryColors.OTHER)
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     "Overnight charging can wear the battery. Try unplugging at ~80%.",
                     style = MaterialTheme.typography.bodySmall,
