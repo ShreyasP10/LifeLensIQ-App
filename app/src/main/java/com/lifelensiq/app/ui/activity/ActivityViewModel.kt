@@ -9,6 +9,7 @@ import com.lifelensiq.app.util.JsonUtil
 import com.lifelensiq.app.util.SettingsStore
 import com.lifelensiq.app.util.TimeUtils
 import com.lifelensiq.app.util.WebCategoryMapper
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,13 +55,26 @@ class ActivityViewModel(
     private val deviceId: String
 ) : ViewModel() {
 
-    private val todayStart = TimeUtils.todayEpochStart()
+    private var todayStart = TimeUtils.todayEpochStart()
+    private var collectJob: Job? = null
     private val _uiState = MutableStateFlow(ActivityUiState())
     val uiState: StateFlow<ActivityUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        restartCollection()
+    }
+
+    /** Re-subscribes so the "today" window rolls over after midnight. */
+    private fun restartCollection() {
+        collectJob?.cancel()
+        collectJob = viewModelScope.launch {
             events.observeEvents(todayStart, Long.MAX_VALUE).collect { list ->
+                val dayStart = TimeUtils.todayEpochStart()
+                if (dayStart != todayStart) {
+                    todayStart = dayStart
+                    restartCollection()
+                    return@collect
+                }
                 cachedEvents = list
                 _uiState.value = buildState(filterFor(_uiState.value.deviceFilter, list))
                     .copy(deviceFilter = _uiState.value.deviceFilter)

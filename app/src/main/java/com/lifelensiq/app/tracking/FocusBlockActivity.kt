@@ -66,6 +66,13 @@ class FocusBlockActivity : ComponentActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        // Pressing Home (or any other dismissal) must not leave a stale
+        // block screen: finish so the next blocked app re-triggers it.
+        if (!isChangingConfigurations && !isFinishing) finish()
+    }
+
     override fun onDestroy() {
         isShowing = false
         scope.cancel()
