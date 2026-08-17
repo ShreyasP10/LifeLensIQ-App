@@ -78,7 +78,14 @@ class AppUsagePoller(
             emitter.emit(EventType.TRACKING_STATE.id, mapOf("state" to "STARTED", "reason" to "PERMISSION_GRANTED"))
         }
         val now = System.currentTimeMillis()
-        val events = usm.queryEvents(now - POLL_INTERVAL_MS - 1000, now)
+
+        // Screen off → the device is not in use, the current session is over.
+        if (!powerManager.isInteractive) {
+            closeCurrent(now)
+            return
+        }
+
+        val events = usm.queryEvents(now - POLL_INTERVAL_MS - 1000, now) ?: return
         val e = UsageEvents.Event()
         var latestForeground: String? = null
         while (events.hasNextEvent()) {
@@ -87,13 +94,28 @@ class AppUsagePoller(
                 latestForeground = e.packageName
             }
         }
-        val candidate = latestForeground?.takeIf { pkg -> !isSystem(pkg) }
 
-        if (candidate == null) {
-            // No foreground app observed this window.
-            if (currentPackage != null && now - currentStart > IDLE_CLOSE_MS) {
-                closeCurrent(now)
+        if (latestForeground == null) {
+            // No app switch in this window. If we already track an app, keep
+            // the session open — the user may have stayed in it for hours.
+            if (currentPackage != null) return
+            // Bootstrap: find the currently-foreground app from aggregated
+            // stats so the very first session after grant is captured too.
+            val recent = usm.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY, now - BOOTSTRAP_WINDOW_MS, now
+            ).filter { it.lastTimeUsed >= now - BOOTSTRAP_WINDOW_MS && !isSystem(it.packageName) }
+                .maxByOrNull { it.lastTimeUsed }
+            if (recent != null) {
+                currentPackage = recent.packageName
+                currentStart = recent.lastTimeUsed
             }
+            return
+        }
+
+        val candidate = latestForeground.takeIf { pkg -> !isSystem(pkg) }
+        if (candidate == null) {
+            // Foreground switched to a system app (launcher/home) → session ended.
+            closeCurrent(now)
             return
         }
         if (candidate != currentPackage) {
@@ -101,7 +123,7 @@ class AppUsagePoller(
             currentPackage = candidate
             currentStart = now
         }
-        if (candidate != null) checkFocusBlock(candidate)
+        checkFocusBlock(candidate)
     }
 
     /** Focus mode: pull the user back when a blocked app comes to foreground. */
@@ -155,7 +177,7 @@ class AppUsagePoller(
     companion object {
         const val POLL_INTERVAL_MS = 15_000L
         const val IDLE_POLL_INTERVAL_MS = 60_000L
-        const val IDLE_CLOSE_MS = 90_000L
         const val NIGHT_PAUSE_END_HOUR = 6
+        const val BOOTSTRAP_WINDOW_MS = 3 * 60_000L
     }
 }

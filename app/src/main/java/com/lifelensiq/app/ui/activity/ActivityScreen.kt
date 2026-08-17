@@ -17,11 +17,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.List
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -61,34 +63,42 @@ fun ActivityScreen(vm: ActivityViewModel, onCategoryClick: (String) -> Unit) {
             }
         }
         item {
-            Card(
-                colors = CardDefaults.cardColors(
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                ),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Total tracked time today", style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    Row(verticalAlignment = Alignment.Bottom) {
+                Column(Modifier.padding(20.dp)) {
+                    Text(
+                        "Total Time Today",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             formatDuration(state.totalMinutes),
-                            fontSize = 34.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            style = MaterialTheme.typography.titleLarge.copy(fontSize = 32.sp),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.Bold
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(12.dp))
                         Icon(
-                            Icons.Filled.List,
+                            androidx.compose.material.icons.Icons.AutoMirrored.Rounded.List,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                     if (state.categories.isNotEmpty()) {
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "${state.categories.size} categories · ${state.categories.sumOf { it.appSessions }} sessions",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            "${state.categories.size} categories · ${state.categories.sumOf { it.appSessions }} sessions tracked",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -101,11 +111,15 @@ fun ActivityScreen(vm: ActivityViewModel, onCategoryClick: (String) -> Unit) {
 
         if (state.donutSlices.isNotEmpty()) {
             item {
-                Card {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+                ) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Time by category", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(12.dp))
-                        DonutChart(state.donutSlices, Modifier.fillMaxWidth())
+                        Text("Time by category", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(16.dp))
+                        DonutChart(state.donutSlices, Modifier.fillMaxWidth().height(200.dp))
                     }
                 }
             }
@@ -141,54 +155,66 @@ fun ActivityScreen(vm: ActivityViewModel, onCategoryClick: (String) -> Unit) {
 @Composable
 private fun CategoryCard(usage: CategoryUsage, maxMinutes: Long, onClick: () -> Unit) {
     val color = CategoryColors.forCategory(usage.category)
-    Card(
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            Modifier.padding(14.dp),
+            Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 Modifier
-                    .size(14.dp)
+                    .size(12.dp)
                     .clip(CircleShape)
                     .background(color)
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(usage.category, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        usage.category,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     Spacer(Modifier.weight(1f))
                     Text(
                         formatDuration(usage.minutes),
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = color
                     )
+                    Spacer(Modifier.width(8.dp))
                     Icon(
-                        Icons.Filled.KeyboardArrowRight,
+                        androidx.compose.material.icons.Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 LinearProgressIndicator(
                     progress = { if (maxMinutes > 0) usage.minutes.toFloat() / maxMinutes else 0f },
                     color = color,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.fillMaxWidth().height(6.dp),
+                    trackColor = color.copy(alpha = 0.1f),
+                    modifier = Modifier.fillMaxWidth().height(8.dp),
                     strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 val details = buildString {
                     if (usage.shortsViews > 0) append("${usage.shortsViews} shorts · ")
                     append("${usage.appCount} apps · ")
                     append("${usage.appSessions} sessions")
                 }
-                Text(details, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    details,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

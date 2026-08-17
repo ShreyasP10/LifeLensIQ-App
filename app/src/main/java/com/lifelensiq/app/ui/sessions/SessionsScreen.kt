@@ -1,6 +1,7 @@
 package com.lifelensiq.app.ui.sessions
 
 import android.content.pm.PackageManager
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,12 +15,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -40,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.time.Instant
@@ -69,9 +74,11 @@ fun SessionsScreen(vm: SessionsViewModel) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
             colors = if (state.active)
                 CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -79,20 +86,27 @@ fun SessionsScreen(vm: SessionsViewModel) {
         ) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Session status", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text(
+                        "Session status",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
                     if (state.active) {
                         Text(
                             formatElapsed(state.elapsedSeconds),
                             style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
                 Text(
                     if (state.active) "ACTIVE — ${state.activeSubject}" else "No active session",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = if (state.active) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = subject,
@@ -100,7 +114,8 @@ fun SessionsScreen(vm: SessionsViewModel) {
                     enabled = !state.active,
                     label = { Text("Subject") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 )
 
                 Spacer(Modifier.height(12.dp))
@@ -114,12 +129,13 @@ fun SessionsScreen(vm: SessionsViewModel) {
                         }
                     },
                     enabled = state.active || subject.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Icon(
-                        if (state.active) Icons.Filled.Check else Icons.Filled.PlayArrow,
+                        if (state.active) Icons.Rounded.CheckCircle else Icons.Rounded.PlayArrow,
                         contentDescription = null,
-                        Modifier.size(18.dp)
+                        Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(if (state.active) "Stop Session" else "Start Session")
@@ -129,6 +145,8 @@ fun SessionsScreen(vm: SessionsViewModel) {
 
         // Focus mode
         Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
             colors = if (state.focusActive)
                 CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             else CardDefaults.cardColors()
@@ -136,23 +154,30 @@ fun SessionsScreen(vm: SessionsViewModel) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Filled.Lock,
+                        Icons.Rounded.Lock,
                         contentDescription = null,
-                        Modifier.size(18.dp),
+                        Modifier.size(20.dp),
                         tint = if (state.focusActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Focus mode", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text(
+                        "Focus mode",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
                     if (state.focusActive) {
                         Text(
                             formatElapsed(state.focusElapsedSeconds),
                             style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
                 Text(
                     if (state.focusActive) "ACTIVE — ${state.focusSubject}" else "Block distracting apps while studying",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = if (state.focusActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (state.focusActive) {
@@ -164,14 +189,15 @@ fun SessionsScreen(vm: SessionsViewModel) {
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = focusSubject,
                     onValueChange = { focusSubject = it },
                     enabled = !state.focusActive,
                     label = { Text("Focus subject") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 )
                 Spacer(Modifier.height(8.dp))
                 if (state.focusBlockedApps.isNotEmpty()) {
@@ -180,13 +206,14 @@ fun SessionsScreen(vm: SessionsViewModel) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { showAppPicker = true },
                         enabled = !state.focusActive,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.medium
                     ) {
                         Text("Choose apps")
                     }
@@ -200,7 +227,8 @@ fun SessionsScreen(vm: SessionsViewModel) {
                             }
                         },
                         enabled = state.focusActive || focusSubject.isNotBlank(),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.medium
                     ) {
                         Text(if (state.focusActive) "End Focus" else "Start Focus")
                     }
@@ -209,32 +237,37 @@ fun SessionsScreen(vm: SessionsViewModel) {
         }
 
         // Manual logger
-        Card {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("Quick log", style = MaterialTheme.typography.titleMedium)
+                Text("Quick log", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
                     "Add a study session you finished without the timer — shows up in history and syncs to the website.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = manualSubject,
                         onValueChange = { manualSubject = it },
                         label = { Text("Subject") },
                         singleLine = true,
-                        modifier = Modifier.weight(1.6f)
+                        modifier = Modifier.weight(1.6f),
+                        shape = MaterialTheme.shapes.medium
                     )
                     OutlinedTextField(
                         value = manualMinutes,
                         onValueChange = { manualMinutes = it.filter(Char::isDigit).take(4) },
-                        label = { Text("Minutes") },
+                        label = { Text("Mins") },
                         singleLine = true,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.medium
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = {
                         vm.logStudyManually(manualSubject, manualMinutes.toIntOrNull() ?: 0)
@@ -242,9 +275,10 @@ fun SessionsScreen(vm: SessionsViewModel) {
                         manualMinutes = "30"
                     },
                     enabled = manualSubject.isNotBlank() && (manualMinutes.toIntOrNull() ?: 0) > 0,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Icon(Icons.Filled.Refresh, contentDescription = null, Modifier.size(18.dp))
+                    Icon(Icons.Outlined.PlayArrow, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Log study session")
                 }
@@ -253,6 +287,8 @@ fun SessionsScreen(vm: SessionsViewModel) {
 
         state.lastSummary?.let { summary ->
             Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -266,25 +302,38 @@ fun SessionsScreen(vm: SessionsViewModel) {
             }
         }
 
-        Card {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("Session history (30 days)", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Session history (30 days)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(12.dp))
                 if (state.history.isEmpty()) {
                     Text(
                         "No sessions logged yet. Start one above.",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 state.history.forEach {
-                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Filled.Check,
+                            Icons.Rounded.CheckCircle,
                             contentDescription = null,
-                            Modifier.size(18.dp),
+                            Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(it.subject, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                             Text(
@@ -298,7 +347,8 @@ fun SessionsScreen(vm: SessionsViewModel) {
                         Text(
                             "${it.durationMin} min",
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -306,6 +356,7 @@ fun SessionsScreen(vm: SessionsViewModel) {
         }
     }
 }
+
 
 @Composable
 private fun BlockedAppsDialog(
@@ -335,15 +386,23 @@ private fun BlockedAppsDialog(
         text = {
             LazyColumn(Modifier.height(360.dp)) {
                 items(apps, key = { it.first }) { (pkg, label) ->
+                    val isChecked = pkg in selected
                     Row(
-                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = isChecked,
+                                role = Role.Checkbox,
+                                onValueChange = { onToggle(pkg) }
+                            )
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
-                            checked = pkg in selected,
-                            onCheckedChange = { onToggle(pkg) }
+                            checked = isChecked,
+                            onCheckedChange = null // Handled by Row for larger touch target
                         )
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(label, style = MaterialTheme.typography.bodyMedium)
                     }
                 }

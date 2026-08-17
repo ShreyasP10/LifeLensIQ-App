@@ -32,6 +32,10 @@ class StepTracker(context: Context) {
     private var emitterRef: EventEmitter? = null
     private var scopeRef: CoroutineScope? = null
 
+    /** True while the sensor listener is registered. */
+    var isRunning: Boolean = false
+        private set
+
     fun hasPermission(context: Context): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) ==
             PackageManager.PERMISSION_GRANTED
@@ -58,6 +62,7 @@ class StepTracker(context: Context) {
         scopeRef = scope
         sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
         registered = true
+        isRunning = true
         scope.launch {
             while (registered) {
                 delay(FLUSH_INTERVAL_MS)
@@ -71,6 +76,7 @@ class StepTracker(context: Context) {
         if (registered) {
             sensorManager.unregisterListener(listener)
             registered = false
+            isRunning = false
         }
         emitterRef = null
         scopeRef = null

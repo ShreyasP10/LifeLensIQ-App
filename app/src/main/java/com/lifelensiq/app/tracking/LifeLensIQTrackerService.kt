@@ -42,6 +42,9 @@ class LifeLensIQTrackerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, buildNotification())
         startTrackingIfNeeded()
+        // Always re-check the step counter (e.g. permission granted while the
+        // service was already running) — no-op when it is already running.
+        startStepTracker(ServiceLocator.eventEmitter())
         return START_STICKY
     }
 
@@ -61,12 +64,20 @@ class LifeLensIQTrackerService : Service() {
         registerReceiver(screenReceiver, screenReceiver.intentFilter())
         registerReceiver(chargeReceiver, chargeReceiver.intentFilter())
 
-        stepTracker = runCatching { StepTracker(this) }.getOrNull()
-        stepTracker?.let {
-            if (it.hasPermission(this)) it.start(scope, emitter)
-        }
-
         scope.launch { emitter.emit(EventType.TRACKING_STATE.id, mapOf("state" to "STARTED")) }
+    }
+
+    /**
+     * (Re)starts the step counter. Called on every start command so that
+     * granting Activity Recognition while the service is already running
+     * takes effect immediately.
+     */
+    private fun startStepTracker(emitter: EventEmitter) {
+        if (stepTracker == null) stepTracker = runCatching { StepTracker(this) }.getOrNull()
+        val tracker = stepTracker ?: return
+        if (tracker.isRunning) return
+        if (!tracker.hasPermission(this)) return
+        tracker.start(scope, emitter)
     }
 
     private fun createChannel() {

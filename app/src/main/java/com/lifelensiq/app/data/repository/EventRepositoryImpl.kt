@@ -81,8 +81,18 @@ class EventRepositoryImpl(
             val entities = docs.mapNotNull { it.toEventEntity() }
             if (entities.isNotEmpty()) eventDao.insertAll(entities)
             entities.size
-        } catch (_: Throwable) {
-            0 // Uploads already succeeded; a failed pull must not fail the run.
+        } catch (t: Throwable) {
+            // Uploads already succeeded; a failed pull must not fail the run —
+            // but log it so Settings shows why website data is missing.
+            syncLogDao.insert(
+                SyncLogEntity(
+                    syncedAt = System.currentTimeMillis(),
+                    batchSize = 0,
+                    success = false,
+                    error = "pull: ${t.message}"
+                )
+            )
+            0
         }
     }
 
@@ -102,17 +112,30 @@ class EventRepositoryImpl(
 private fun Map<String, Any?>.toEventEntity(): EventEntity? {
     val eventId = (this["eventId"] as? String) ?: (this["id"] as? String) ?: return null
     val timestamp = (this["timestamp"] as? Number)?.toLong()
-        ?: (this["ts"] as? Number)?.toLong() ?: return null
+        ?: (this["ts"] as? Number)?.toLong()
+        ?: (this["timestamp"] as? com.google.firebase.Timestamp)?.let { it.toDate().time }
+        ?: (this["ts"] as? com.google.firebase.Timestamp)?.let { it.toDate().time }
+        ?: return null
     val eventType = (this["eventType"] as? String) ?: return null
-    val payload = this["metadata"] as? Map<*, *>
-        ?: this["payload"] as? Map<*, *>
-        ?: emptyMap<String, Any?>()
+    val payload = ((this["metadata"] as? Map<*, *>) ?: (this["payload"] as? Map<*, *>) ?: emptyMap<String, Any?>())
+        .mapKeys { it.key.toString() }
+        .toMutableMap()
+    // The web dashboard writes durationSeconds at the top level; the app
+    // reads durationMs from the payload — synthesize it when missing so
+    // website-written sessions show real durations everywhere.
+    if (payload["durationMs"] == null) {
+        val durationSeconds = (this["durationSeconds"] as? Number)?.toLong()
+        if (durationSeconds != null) payload["durationMs"] = durationSeconds * 1000
+    }
+    if (payload["startedAt"] == null && this["ts"] != null) {
+        payload["startedAt"] = timestamp
+    }
     return EventEntity(
         eventId = eventId,
         userId = (this["userId"] as? String) ?: "anonymous",
         deviceId = (this["deviceId"] as? String) ?: (this["device"] as? String) ?: "",
         eventType = eventType,
-        payloadJson = JsonUtil.encodePayload(payload.mapKeys { it.key.toString() }),
+        payloadJson = JsonUtil.encodePayload(payload),
         timestamp = timestamp,
         synced = true
     )

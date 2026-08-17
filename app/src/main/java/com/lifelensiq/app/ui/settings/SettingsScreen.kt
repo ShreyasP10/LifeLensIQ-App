@@ -15,14 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +44,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.lifelensiq.app.ui.navigation.Routes
 
 @Composable
@@ -113,26 +118,39 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         state.message?.let { msg ->
-            Text(
-                msg,
-                color = if (msg.startsWith("Deleted") || msg.startsWith("Synced"))
-                    MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-            )
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (msg.startsWith("Deleted") || msg.startsWith("Synced"))
+                        MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+                ),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text(
+                    msg,
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (msg.startsWith("Deleted") || msg.startsWith("Synced"))
+                        MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
         }
 
-        Card {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("Permissions", style = MaterialTheme.typography.titleMedium)
+                Text("Permissions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Grant or revoke every permission from here — no need to hunt through system Settings.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 PermissionRow(
                     title = "Usage access",
                     description = "Records which apps you open",
@@ -140,6 +158,7 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
                     onGrant = { vm.openUsageAccessSettings(context) },
                     onRevoke = { vm.openUsageAccessSettings(context) }
                 )
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 PermissionRow(
                     title = "Notifications",
                     description = "Daily summary, morning report, alerts",
@@ -147,6 +166,7 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
                     onGrant = { notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) },
                     onRevoke = { vm.revokeNotifications(context) }
                 )
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 PermissionRow(
                     title = "Activity recognition (steps)",
                     description = "Counts steps walked",
@@ -154,6 +174,7 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
                     onGrant = { stepPermission.launch(Manifest.permission.ACTIVITY_RECOGNITION) },
                     onRevoke = { vm.revokeStepsPermission(context) }
                 )
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 PermissionRow(
                     title = "Accessibility (Reels & Shorts)",
                     description = "Detects short-form video (optional)",
@@ -161,52 +182,59 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
                     onGrant = { vm.openAccessibilitySettings(context) },
                     onRevoke = { vm.openAccessibilitySettings(context) }
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 Text(
                     "Usage access and accessibility are Android system-level — tapping Grant/Revoke opens the exact system page for you.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 OutlinedButton(
                     onClick = { vm.restartTracking() },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, Modifier.size(18.dp))
+                    Icon(androidx.compose.material.icons.Icons.Rounded.PlayArrow, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Restart tracking service")
                 }
             }
         }
 
-        Card {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("Goals & notifications", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
+                Text("Goals & notifications", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = studyGoal,
                     onValueChange = { studyGoal = it.filter(Char::isDigit).take(4) },
                     label = { Text("Daily study goal (minutes)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = screenLimit,
                     onValueChange = { screenLimit = it.filter(Char::isDigit).take(4) },
                     label = { Text("Daily screen-time limit (minutes)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = shortsViews,
                     onValueChange = { shortsViews = it.filter(Char::isDigit).take(5) },
                     label = { Text("Shorts nudge threshold (views)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = {
                         vm.updateGoals(
@@ -215,9 +243,10 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
                             shortsViews.toIntOrNull() ?: state.shortsAlertViews
                         )
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) { Text("Save goals") }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 ToggleRow("Daily summary (9 PM)", state.dailySummaryEnabled, vm::setDailySummary)
                 ToggleRow("Morning report (first wake)", state.morningReportEnabled, vm::setMorningReport)
                 ToggleRow("Screen-limit alert", state.screenLimitAlertEnabled, vm::setScreenLimitAlert)
@@ -226,48 +255,63 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
             }
         }
 
-        Card {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("App categories", style = MaterialTheme.typography.titleMedium)
+                Text("App categories", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Reclassify any installed app into a different category (Study, Timepass, …).",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 OutlinedButton(
                     onClick = { nav.navigate(Routes.CATEGORY_OVERRIDES) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Icon(Icons.Filled.List, contentDescription = null, Modifier.size(18.dp))
+                    Icon(androidx.compose.material.icons.Icons.AutoMirrored.Rounded.List, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Edit app categories")
                 }
             }
         }
 
-        Card {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("Sync", style = MaterialTheme.typography.titleMedium)
+                Text("Sync", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Syncs every 15 min automatically. Uploads app events and downloads events written by the web dashboard, so app + website data stay in one place.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { vm.syncNow() }, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.Refresh, contentDescription = null, Modifier.size(18.dp))
+                Spacer(Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = { vm.syncNow() },
+                    enabled = !state.busy,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(androidx.compose.material.icons.Icons.Rounded.Refresh, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Sync now")
                 }
             }
         }
 
-        Card {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large
+        ) {
             Column(Modifier.padding(16.dp)) {
-                Text("Privacy", style = MaterialTheme.typography.titleMedium)
+                Text("Privacy", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Only metadata is collected — app-usage, screen, charging, steps and study events. " +
@@ -277,7 +321,7 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     "Cloud sync is only available after signing in.",
                     style = MaterialTheme.typography.bodySmall,
@@ -286,24 +330,46 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
             }
         }
 
-        Card {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+            )
+        ) {
             Column(Modifier.padding(16.dp)) {
                 Text("Danger zone", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                Spacer(Modifier.height(4.dp))
-                OutlinedButton(onClick = { confirmDeleteLocal = true }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.Delete, contentDescription = null, Modifier.size(18.dp))
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { confirmDeleteLocal = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(androidx.compose.material.icons.Icons.Rounded.Delete, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Delete local data")
                 }
-                OutlinedButton(onClick = { confirmDeleteCloud = true }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.Delete, contentDescription = null, Modifier.size(18.dp))
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { confirmDeleteCloud = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(androidx.compose.material.icons.Icons.Rounded.Delete, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Delete cloud data (Firestore)")
                 }
             }
         }
 
-        Button(onClick = { vm.logout() }, modifier = Modifier.fillMaxWidth()) {
+        Button(
+            onClick = { vm.logout() },
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.outline
+            )
+        ) {
             Text("Logout")
         }
     }
@@ -312,11 +378,18 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
 @Composable
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .padding(vertical = 4.dp)
+            .clickable { onChange(!checked) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
+        Switch(
+            checked = checked,
+            onCheckedChange = null // Handled by Row clickable for larger touch target
+        )
     }
 }
 
@@ -347,8 +420,18 @@ private fun PermissionRow(
         }
         Spacer(Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onGrant) { Text("Grant") }
-            TextButton(onClick = onRevoke) { Text("Revoke", color = MaterialTheme.colorScheme.error) }
+            TextButton(
+                onClick = onGrant,
+                modifier = Modifier.semantics {
+                    contentDescription = "Grant $title permission"
+                }
+            ) { Text("Grant") }
+            TextButton(
+                onClick = onRevoke,
+                modifier = Modifier.semantics {
+                    contentDescription = "Revoke $title permission"
+                }
+            ) { Text("Revoke", color = MaterialTheme.colorScheme.error) }
         }
     }
 }
