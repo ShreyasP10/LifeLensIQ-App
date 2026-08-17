@@ -32,10 +32,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.lifelensiq.app.ui.components.BannerCard
+import com.lifelensiq.app.ui.components.ProductivityCalendar
 import com.lifelensiq.app.ui.components.ProgressRing
 import com.lifelensiq.app.ui.components.QuickAction
 import com.lifelensiq.app.ui.components.StatCard
-import com.lifelensiq.app.ui.components.StreakHeatmap
 import com.lifelensiq.app.ui.components.WeeklyBarChart
 import com.lifelensiq.app.ui.navigation.Routes
 import com.lifelensiq.app.ui.theme.CategoryColors
@@ -80,8 +80,8 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
 
         Text("Overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Study Time", "${state.studyMinutesToday}m", CategoryColors.STUDY, Modifier.weight(1f))
-            StatCard("Screen Time", "${state.screenTimeMinutesToday}m", CategoryColors.PRODUCTIVITY, Modifier.weight(1f))
+            StatCard("Productive Time", "${state.productiveMinutesToday}m", CategoryColors.PRODUCTIVITY, Modifier.weight(1f))
+            StatCard("Screen Time", "${state.screenTimeMinutesToday}m", CategoryColors.SHORT_FORM, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatCard("Shorts", state.shortsToday.toString(), CategoryColors.SHORT_FORM, Modifier.weight(1f))
@@ -129,10 +129,10 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     ProgressRing(
-                        progress = state.studyMinutesToday.toFloat() / state.studyGoalMin.coerceAtLeast(1),
-                        valueLabel = "${state.studyMinutesToday}/${state.studyGoalMin}m",
-                        subLabel = "Study",
-                        color = CategoryColors.STUDY
+                        progress = state.productiveMinutesToday.toFloat() / state.productiveGoalMin.coerceAtLeast(1),
+                        valueLabel = "${state.productiveMinutesToday}/${state.productiveGoalMin}m",
+                        subLabel = "Productive",
+                        color = CategoryColors.PRODUCTIVITY
                     )
                     ProgressRing(
                         progress = (state.screenTimeMinutesToday.toFloat() / state.screenLimitMin.coerceAtLeast(1))
@@ -155,7 +155,7 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Study vs Screen",
+                        "Productive vs Screen",
                         style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.weight(1f),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -170,11 +170,11 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                WeeklyBarChart(state.weeklyStudy, state.weeklyScreen)
+                WeeklyBarChart(state.weeklyProductive, state.weeklyScreen)
             }
         }
 
-        // Productivity heatmap
+        // Productivity calendar
         Text("Productivity Calendar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
@@ -183,19 +183,19 @@ fun HomeScreen(vm: HomeViewModel, nav: NavHostController) {
         ) {
             Column(Modifier.padding(16.dp)) {
                 Text(
-                    "Consistency heatmap (last 3 months)",
+                    "Days run 2 AM to 2 AM — tap the arrows to browse months",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(12.dp))
-                StreakHeatmap(state.heatmap)
+                ProductivityCalendar(state.calendar)
             }
         }
 
         Spacer(Modifier.height(8.dp))
 
         QuickAction(
-            label = "Start Study Session",
+            label = "Start Productive Session",
             icon = androidx.compose.material.icons.Icons.Rounded.PlayArrow,
             onClick = { nav.navigate(Routes.SESSIONS) },
             modifier = Modifier.fillMaxWidth()

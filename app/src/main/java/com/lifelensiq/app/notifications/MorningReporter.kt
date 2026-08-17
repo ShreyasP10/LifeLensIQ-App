@@ -26,10 +26,22 @@ object MorningReporter {
         val repo = ServiceLocator.eventRepository()
         val todayStart = TimeUtils.todayEpochStart()
         val yesterdayStart = todayStart - 86_400_000L
+        val deviceId = com.lifelensiq.app.util.DeviceIdProvider.get(ServiceLocator.context())
+        val overrides = SettingsStore.categoryOverrides()
         val yesterday = repo.eventsBetween(yesterdayStart, todayStart)
+            .filter { it.deviceId == deviceId }
 
-        val study = yesterday.filter { it.eventType == EventType.STUDY_SESSION.id }
-            .sumOf { durationMs(it) } / 60_000
+        fun productiveOf(e: EventEntity): Long = when (e.eventType) {
+            EventType.STUDY_SESSION.id -> durationMs(e)
+            EventType.APP_SESSION.id -> {
+                val cat = com.lifelensiq.app.util.WebCategoryMapper
+                    .categoryForPackage(payloadString(e, "packageName"), overrides)
+                if (com.lifelensiq.app.util.WebCategoryMapper.isProductive(cat)) durationMs(e) else 0L
+            }
+            else -> 0L
+        }
+
+        val productive = yesterday.sumOf { productiveOf(it) } / 60_000
         val screen = yesterday.filter { it.eventType == EventType.APP_SESSION.id }
             .sumOf { durationMs(it) } / 60_000
         val steps = yesterday.filter { it.eventType == EventType.STEPS.id }
@@ -39,7 +51,7 @@ object MorningReporter {
         val pickups = yesterday.count { it.eventType == EventType.SCREEN_ON.id }
 
         val score = scoreOf(
-            study = study,
+            study = productive,
             screen = screen,
             shorts = shorts,
             goal = SettingsStore.studyGoalMin,
@@ -53,10 +65,10 @@ object MorningReporter {
             NotificationHelper.CHANNEL_SUMMARY,
             NOTIF_MORNING,
             "Good morning — here's yesterday",
-            "Score $score/100 · Study $study/${SettingsStore.studyGoalMin} min · Screen $screen min · " +
+            "Score $score/100 · Productive $productive/${SettingsStore.studyGoalMin} min · Screen $screen min · " +
                 "Steps $steps · Reels $shorts · $pickups pickups. Today's goal: ${
                     SettingsStore.studyGoalMin
-                } min study."
+                } min productive."
         )
         SettingsStore.lastMorningReportDate = today
     }
@@ -80,6 +92,9 @@ object MorningReporter {
     }
 
     private fun durationMs(e: EventEntity): Long = payloadLong(e, "durationMs")
+
+    private fun payloadString(e: EventEntity, key: String): String =
+        (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
 
     private fun payloadLong(e: EventEntity, key: String): Long =
         (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)

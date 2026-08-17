@@ -130,6 +130,12 @@ private fun Map<String, Any?>.toEventEntity(): EventEntity? {
     if (payload["startedAt"] == null && this["ts"] != null) {
         payload["startedAt"] = timestamp
     }
+    // Keep the website envelope fields so the app can group/display web data
+    // the same way the dashboard does.
+    if (payload["category"] == null) this["category"]?.let { payload["category"] = it }
+    if (payload["domain"] == null) this["domain"]?.let { payload["domain"] = it }
+    if (payload["path"] == null) this["path"]?.let { payload["path"] = it }
+    if (payload["title"] == null) this["title"]?.let { payload["title"] = it }
     return EventEntity(
         eventId = eventId,
         userId = (this["userId"] as? String) ?: "anonymous",

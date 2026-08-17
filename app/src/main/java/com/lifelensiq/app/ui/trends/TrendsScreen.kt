@@ -86,7 +86,7 @@ fun TrendsScreen(vm: TrendsViewModel) {
                 )
                 Spacer(Modifier.height(12.dp))
                 TrendRow("Screen time", formatMinutes(state.screenMin), CategoryColors.PRODUCTIVITY)
-                TrendRow("Study time", formatMinutes(state.studyMin), CategoryColors.STUDY)
+                TrendRow("Productive time", formatMinutes(state.productiveMin), CategoryColors.PRODUCTIVITY)
                 TrendRow("Steps", state.steps.toString(), CategoryColors.UTILITIES)
                 TrendRow("Reels / Shorts", state.shorts.toString(), CategoryColors.SHORT_FORM)
                 TrendRow("Phone pickups", state.pickups.toString(), CategoryColors.OTHER)
@@ -111,7 +111,7 @@ fun TrendsScreen(vm: TrendsViewModel) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(16.dp))
-                CompareRow("Study", state.monthStudy, state.prevStudy, CategoryColors.STUDY)
+                CompareRow("Productive", state.monthProductive, state.prevProductive, CategoryColors.PRODUCTIVITY)
                 CompareRow("Screen", state.monthScreen, state.prevScreen, CategoryColors.PRODUCTIVITY)
                 CompareRow("Steps", state.monthSteps, state.prevSteps, CategoryColors.UTILITIES)
                 CompareRow("Shorts", state.monthShorts, state.prevShorts, CategoryColors.SHORT_FORM)

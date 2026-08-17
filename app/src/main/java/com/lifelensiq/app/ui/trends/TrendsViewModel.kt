@@ -6,6 +6,8 @@ import com.lifelensiq.app.data.local.EventEntity
 import com.lifelensiq.app.domain.EventType
 import com.lifelensiq.app.domain.repository.EventRepository
 import com.lifelensiq.app.util.JsonUtil
+import com.lifelensiq.app.util.SettingsStore
+import com.lifelensiq.app.util.WebCategoryMapper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +21,7 @@ data class TrendsUiState(
     val periodDays: Int = 7,
     // Totals for the selected period
     val screenMin: Long = 0,
-    val studyMin: Long = 0,
+    val productiveMin: Long = 0,
     val steps: Long = 0,
     val shorts: Long = 0,
     val pickups: Long = 0,
@@ -27,11 +29,11 @@ data class TrendsUiState(
     val chartValues: List<Long> = emptyList(),
     val chartLabels: List<String> = emptyList(),
     // Monthly comparison: this month vs previous month
-    val monthStudy: Long = 0,
+    val monthProductive: Long = 0,
     val monthScreen: Long = 0,
     val monthSteps: Long = 0,
     val monthShorts: Long = 0,
-    val prevStudy: Long = 0,
+    val prevProductive: Long = 0,
     val prevScreen: Long = 0,
     val prevSteps: Long = 0,
     val prevShorts: Long = 0,
@@ -68,11 +70,20 @@ class TrendsViewModel(
         val now = System.currentTimeMillis()
         val from = now - days * 86_400_000L
         val inPeriod = cached.filter { it.timestamp in from..now }
+        val overrides = SettingsStore.categoryOverrides()
+
+        fun productiveOf(e: EventEntity): Long = when (e.eventType) {
+            EventType.STUDY_SESSION.id -> durationMs(e)
+            EventType.APP_SESSION.id -> {
+                val cat = WebCategoryMapper.categoryForPackage(payloadString(e, "packageName"), overrides)
+                if (WebCategoryMapper.isProductive(cat)) durationMs(e) else 0L
+            }
+            else -> 0L
+        }
 
         val screenMin = inPeriod.filter { it.eventType == EventType.APP_SESSION.id }
             .sumOf { durationMs(it) } / 60_000
-        val studyMin = inPeriod.filter { it.eventType == EventType.STUDY_SESSION.id }
-            .sumOf { durationMs(it) } / 60_000
+        val productiveMin = inPeriod.sumOf { productiveOf(it) } / 60_000
         val steps = inPeriod.filter { it.eventType == EventType.STEPS.id }
             .sumOf { payloadLong(it, "stepDelta") }
         val shorts = inPeriod.filter { it.eventType == EventType.SHORT_VIDEO.id }
@@ -89,17 +100,17 @@ class TrendsViewModel(
             it.copy(
                 periodDays = days,
                 screenMin = screenMin,
-                studyMin = studyMin,
+                productiveMin = productiveMin,
                 steps = steps,
                 shorts = shorts,
                 pickups = pickups,
                 chartValues = chartValues,
                 chartLabels = chartLabels,
-                monthStudy = monthCompare.first.study,
+                monthProductive = monthCompare.first.productive,
                 monthScreen = monthCompare.first.screen,
                 monthSteps = monthCompare.first.steps,
                 monthShorts = monthCompare.first.shorts,
-                prevStudy = monthCompare.second.study,
+                prevProductive = monthCompare.second.productive,
                 prevScreen = monthCompare.second.screen,
                 prevSteps = monthCompare.second.steps,
                 prevShorts = monthCompare.second.shorts,
@@ -146,7 +157,7 @@ class TrendsViewModel(
         return values.map { it / 60_000 } to labels.toList()
     }
 
-    private data class MonthTotals(val study: Long, val screen: Long, val steps: Long, val shorts: Long)
+    private data class MonthTotals(val productive: Long, val screen: Long, val steps: Long, val shorts: Long)
 
     /** Calendar-month comparison: current month (to date) vs previous month (full). */
     private fun monthlyComparison(): Pair<MonthTotals, MonthTotals> {
@@ -155,11 +166,21 @@ class TrendsViewModel(
         val currentStart = now.withDayOfMonth(1).atStartOfDay(zone).toInstant().toEpochMilli()
         val prevStart = now.withDayOfMonth(1).minusMonths(1).atStartOfDay(zone).toInstant().toEpochMilli()
         val prevEnd = currentStart
+        val overrides = SettingsStore.categoryOverrides()
+
+        fun productiveOf(e: EventEntity): Long = when (e.eventType) {
+            EventType.STUDY_SESSION.id -> durationMs(e)
+            EventType.APP_SESSION.id -> {
+                val cat = WebCategoryMapper.categoryForPackage(payloadString(e, "packageName"), overrides)
+                if (WebCategoryMapper.isProductive(cat)) durationMs(e) else 0L
+            }
+            else -> 0L
+        }
 
         fun totals(from: Long, to: Long): MonthTotals {
             val list = cached.filter { it.timestamp in from until to }
             return MonthTotals(
-                study = list.filter { it.eventType == EventType.STUDY_SESSION.id }.sumOf { durationMs(it) } / 60_000,
+                productive = list.sumOf { productiveOf(it) } / 60_000,
                 screen = list.filter { it.eventType == EventType.APP_SESSION.id }.sumOf { durationMs(it) } / 60_000,
                 steps = list.filter { it.eventType == EventType.STEPS.id }.sumOf { payloadLong(it, "stepDelta") },
                 shorts = list.filter { it.eventType == EventType.SHORT_VIDEO.id }.sumOf { payloadLong(it, "views") }
@@ -192,6 +213,9 @@ class TrendsViewModel(
     }
 
     private fun durationMs(e: EventEntity): Long = payloadLong(e, "durationMs")
+
+    private fun payloadString(e: EventEntity, key: String): String =
+        (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
 
     private fun payloadLong(e: EventEntity, key: String): Long =
         (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)

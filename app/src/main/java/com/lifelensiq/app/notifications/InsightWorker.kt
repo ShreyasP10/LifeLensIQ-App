@@ -40,10 +40,22 @@ class InsightWorker(context: Context, params: WorkerParameters) :
     private suspend fun runSummary(): Result {
         if (!SettingsStore.dailySummaryEnabled) return Result.success()
         val todayStart = TimeUtils.todayEpochStart()
+        val deviceId = com.lifelensiq.app.util.DeviceIdProvider.get(ServiceLocator.context())
+        val overrides = SettingsStore.categoryOverrides()
         val events = ServiceLocator.eventRepository().eventsBetween(todayStart, Long.MAX_VALUE)
+            .filter { it.deviceId == deviceId }
 
-        val studyMin = events.filter { it.eventType == EventType.STUDY_SESSION.id }
-            .sumOf { durationMs(it) } / 60_000
+        fun productiveOf(e: EventEntity): Long = when (e.eventType) {
+            EventType.STUDY_SESSION.id -> durationMs(e)
+            EventType.APP_SESSION.id -> {
+                val cat = com.lifelensiq.app.util.WebCategoryMapper
+                    .categoryForPackage(payloadString(e, "packageName"), overrides)
+                if (com.lifelensiq.app.util.WebCategoryMapper.isProductive(cat)) durationMs(e) else 0L
+            }
+            else -> 0L
+        }
+
+        val productiveMin = events.sumOf { productiveOf(it) } / 60_000
         val screenMin = events.filter { it.eventType == EventType.APP_SESSION.id }
             .sumOf { durationMs(it) } / 60_000
         val steps = events.filter { it.eventType == EventType.STEPS.id }
@@ -56,7 +68,7 @@ class InsightWorker(context: Context, params: WorkerParameters) :
             NotificationHelper.CHANNEL_SUMMARY,
             NOTIF_SUMMARY,
             "Your day in numbers",
-            "Study $studyMin min · Screen $screenMin min · Steps $steps · Reels $shorts"
+            "Productive $productiveMin min · Screen $screenMin min · Steps $steps · Reels $shorts"
         )
         return Result.success()
     }
@@ -117,6 +129,9 @@ class InsightWorker(context: Context, params: WorkerParameters) :
     }
 
     private fun durationMs(e: EventEntity): Long = payloadLong(e, "durationMs")
+
+    private fun payloadString(e: EventEntity, key: String): String =
+        (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
 
     private fun payloadLong(e: EventEntity, key: String): Long =
         (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)

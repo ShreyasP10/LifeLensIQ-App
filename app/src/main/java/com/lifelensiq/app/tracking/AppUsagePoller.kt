@@ -11,8 +11,9 @@ import kotlinx.coroutines.delay
 
 /**
  * Polls UsageStatsManager and emits APP_SESSION events
- * (start/end of foreground app usage). Polls every 15 s while the
- * screen is on and relaxes to 60 s while it is off to save battery.
+ * (start/end of foreground app usage). Runs 24/7: polls every 15 s while
+ * the screen is on and relaxes to 60 s while it is off to save battery.
+ * Sessions end exactly on MOVE_TO_BACKGROUND / screen-off.
  */
 class AppUsagePoller(
     private val context: Context,
@@ -34,12 +35,6 @@ class AppUsagePoller(
     suspend fun pollLoop() {
         wasGranted = usageAccessGranted()
         while (true) {
-            if (isNight()) {
-                // Night pause: no polling 00:00-06:00 — battery saver.
-                closeCurrentIfIdle()
-                delay(timeUntilMorningMs())
-                continue
-            }
             runCatching { pollOnce() }
             delay(pollIntervalMs())
         }
@@ -48,18 +43,6 @@ class AppUsagePoller(
     /** 15 s while the screen is on, 60 s while off. */
     private fun pollIntervalMs(): Long =
         if (powerManager.isInteractive) POLL_INTERVAL_MS else IDLE_POLL_INTERVAL_MS
-
-    private fun isNight(): Boolean {
-        val hour = java.time.LocalTime.now().hour
-        return hour < NIGHT_PAUSE_END_HOUR
-    }
-
-    /** Millis until 06:00 today (or tomorrow if past midnight... always today when hour < 6). */
-    private fun timeUntilMorningMs(): Long {
-        val now = java.time.ZonedDateTime.now()
-        val target = now.toLocalDate().atTime(NIGHT_PAUSE_END_HOUR, 0).atZone(now.zone)
-        return java.time.Duration.between(now, target).toMillis().coerceAtLeast(1)
-    }
 
     suspend fun pollOnce() {
         if (!usageAccessGranted()) {
@@ -87,43 +70,56 @@ class AppUsagePoller(
 
         val events = usm.queryEvents(now - POLL_INTERVAL_MS - 1000, now) ?: return
         val e = UsageEvents.Event()
-        var latestForeground: String? = null
+        var latestForeground: Pair<String, Long>? = null
+        var currentBackgroundedAt: Long? = null
         while (events.hasNextEvent()) {
             events.getNextEvent(e)
-            if (e.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
-                latestForeground = e.packageName
+            when (e.eventType) {
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> latestForeground = e.packageName to e.timeStamp
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    if (e.packageName == currentPackage) currentBackgroundedAt = e.timeStamp
+                }
             }
         }
 
-        if (latestForeground == null) {
-            // No app switch in this window. If we already track an app, keep
-            // the session open — the user may have stayed in it for hours.
-            if (currentPackage != null) return
-            // Bootstrap: find the currently-foreground app from aggregated
-            // stats so the very first session after grant is captured too.
-            val recent = usm.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY, now - BOOTSTRAP_WINDOW_MS, now
-            ).filter { it.lastTimeUsed >= now - BOOTSTRAP_WINDOW_MS && !isSystem(it.packageName) }
-                .maxByOrNull { it.lastTimeUsed }
-            if (recent != null) {
-                currentPackage = recent.packageName
-                currentStart = recent.lastTimeUsed
-            }
+        if (currentBackgroundedAt != null) {
+            // The tracked app went to the background in this window — end the
+            // session exactly there instead of waiting for a new foreground.
+            closeCurrent(currentBackgroundedAt)
             return
         }
 
-        val candidate = latestForeground.takeIf { pkg -> !isSystem(pkg) }
-        if (candidate == null) {
-            // Foreground switched to a system app (launcher/home) → session ended.
-            closeCurrent(now)
+        val fg = latestForeground
+        if (fg != null) {
+            val candidate = fg.first.takeIf { pkg -> !isSystem(pkg) }
+            if (candidate == null) {
+                // Foreground switched to a system app (launcher/home) → session ended.
+                closeCurrent(now)
+                return
+            }
+            if (candidate != currentPackage) {
+                closeCurrent(now)
+                currentPackage = candidate
+                currentStart = fg.second
+            }
+            checkFocusBlock(candidate)
             return
         }
-        if (candidate != currentPackage) {
-            closeCurrent(now)
-            currentPackage = candidate
-            currentStart = now
+
+        // No app switch in this window. If we already track an app, keep the
+        // session open — the user may have stayed in it for hours.
+        if (currentPackage != null) return
+
+        // Bootstrap: find the currently-foreground app from aggregated stats
+        // so the very first session after grant is captured too.
+        val recent = usm.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY, now - BOOTSTRAP_WINDOW_MS, now
+        ).filter { it.lastTimeUsed >= now - BOOTSTRAP_WINDOW_MS && !isSystem(it.packageName) }
+            .maxByOrNull { it.lastTimeUsed }
+        if (recent != null) {
+            currentPackage = recent.packageName
+            currentStart = recent.lastTimeUsed
         }
-        checkFocusBlock(candidate)
     }
 
     /** Focus mode: pull the user back when a blocked app comes to foreground. */
@@ -177,7 +173,6 @@ class AppUsagePoller(
     companion object {
         const val POLL_INTERVAL_MS = 15_000L
         const val IDLE_POLL_INTERVAL_MS = 60_000L
-        const val NIGHT_PAUSE_END_HOUR = 6
         const val BOOTSTRAP_WINDOW_MS = 3 * 60_000L
     }
 }

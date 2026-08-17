@@ -30,25 +30,20 @@ data class AppUsageItem(
     val category: String
 )
 
-enum class DeviceFilter(val label: String) {
-    ALL("All"),
-    THIS_DEVICE("This device"),
-    WEB("Website")
-}
-
 data class ActivityUiState(
     val loading: Boolean = true,
     val totalMinutes: Long = 0,
     val categories: List<CategoryUsage> = emptyList(),
     val topApps: List<AppUsageItem> = emptyList(),
-    val donutSlices: List<Pair<String, Long>> = emptyList(),
-    val deviceFilter: DeviceFilter = DeviceFilter.ALL
+    val donutSlices: List<Pair<String, Long>> = emptyList()
 )
 
 /**
  * Aggregates today's APP_SESSION / SHORT_VIDEO / STUDY_SESSION events into
  * the web dashboard's category vocabulary (WebCategoryMapper) so the phone
  * shows the same Study/DSA/Development/... breakdown the dashboard does.
+ * Phone-only: events that were synced down from the website are ignored —
+ * they live in the dedicated Website tab.
  */
 class ActivityViewModel(
     private val events: EventRepository,
@@ -64,7 +59,7 @@ class ActivityViewModel(
         restartCollection()
     }
 
-    /** Re-subscribes so the "today" window rolls over after midnight. */
+    /** Re-subscribes so the "today" window rolls over at 02:00. */
     private fun restartCollection() {
         collectJob?.cancel()
         collectJob = viewModelScope.launch {
@@ -75,23 +70,11 @@ class ActivityViewModel(
                     restartCollection()
                     return@collect
                 }
-                cachedEvents = list
-                _uiState.value = buildState(filterFor(_uiState.value.deviceFilter, list))
-                    .copy(deviceFilter = _uiState.value.deviceFilter)
+                cachedEvents = list.filter { it.deviceId == deviceId }
+                _uiState.value = buildState(cachedEvents)
             }
         }
     }
-
-    fun setDeviceFilter(filter: DeviceFilter) {
-        _uiState.value = buildState(filterFor(filter, cachedEvents)).copy(deviceFilter = filter)
-    }
-
-    private fun filterFor(filter: DeviceFilter, list: List<EventEntity>): List<EventEntity> =
-        when (filter) {
-            DeviceFilter.ALL -> list
-            DeviceFilter.THIS_DEVICE -> list.filter { it.deviceId == deviceId }
-            DeviceFilter.WEB -> list.filter { it.deviceId == "web" }
-        }
 
     private var cachedEvents: List<EventEntity> = emptyList()
 
