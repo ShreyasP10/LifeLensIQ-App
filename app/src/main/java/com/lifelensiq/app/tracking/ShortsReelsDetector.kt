@@ -17,14 +17,14 @@ import kotlinx.coroutines.launch
  *
  * Prototype heuristic — Android exposes no official API for in-app content,
  * so this watches for the "Reels"/"Shorts" marker in the active window and
- * counts each distinct content change while it is visible (one swipe ≈ one
+ * counts each scroll/content change while it is visible (one swipe ≈ one
  * short). Nothing is read or stored except the counts. Best-effort by design.
  *
  * Performance: accessibility events run on the tracked app's process, so an
  * aggressive service slows YouTube/Instagram down and can alter their UI.
  * To stay invisible we (1) check the cheap event packageName first and only
- * touch the window tree for our four target apps, (2) never scan more than
- * once per SCAN_THROTTLE_MS, and (3) bound the tree walk by node budget so a
+ * touch the window tree for our target apps, (2) never scan more than once
+ * per SCAN_THROTTLE_MS, and (3) bound the tree walk by node budget so a
  * huge YouTube hierarchy cannot stall the app we are watching.
  */
 class ShortsReelsDetector : AccessibilityService() {
@@ -41,7 +41,9 @@ class ShortsReelsDetector : AccessibilityService() {
         val now = System.currentTimeMillis()
         // Cheap gate first: only our target packages are worth scanning.
         val pkg = event?.packageName?.toString() ?: return
-        if (pkg !in TARGET_PACKAGES) return
+        val platform = PLATFORM_BY_PACKAGE[pkg] ?: return
+        // Only count on swipe/content signals — not on every frame update.
+        if (event.eventType !in COUNT_SIGNAL_TYPES) return
         // Battery guard: never scan more than once per throttle window.
         if (now - lastScanAt < SCAN_THROTTLE_MS) return
         lastScanAt = now
@@ -54,7 +56,6 @@ class ShortsReelsDetector : AccessibilityService() {
                 return
             }
 
-            val platform = PLATFORM_BY_PACKAGE[pkg] ?: "unknown"
             if (sessionPlatform != platform) {
                 closeSessionIfOpen(now)
                 sessionPlatform = platform
@@ -140,6 +141,12 @@ class ShortsReelsDetector : AccessibilityService() {
         private const val COUNT_THROTTLE_MS = 1_000L
         private const val MAX_NODES = 400
         private const val MAX_DEPTH = 12
+
+        /** Swipe/content-change signals that mean "user moved to the next video". */
+        private val COUNT_SIGNAL_TYPES = setOf(
+            AccessibilityEvent.TYPE_VIEW_SCROLLED,
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+        )
 
         private val TARGET_PACKAGES = setOf(
             "com.instagram.android", "com.instagram.lite",

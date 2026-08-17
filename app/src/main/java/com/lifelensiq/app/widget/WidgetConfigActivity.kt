@@ -94,7 +94,7 @@ private fun ConfigContent(widgetId: Int, onSave: (Boolean, Map<String, Boolean>)
             Text("Dark theme", modifier = Modifier.weight(1f))
             Switch(checked = dark, onCheckedChange = { dark = it })
         }
-        StatToggle("Study time", study) { study = it }
+        StatToggle("Productive time", study) { study = it }
         StatToggle("Screen time", screen) { screen = it }
         StatToggle("Shorts count", shorts) { shorts = it }
         StatToggle("Steps", steps) { steps = it }

@@ -13,6 +13,8 @@ import com.lifelensiq.app.domain.EventType
 import com.lifelensiq.app.util.JsonUtil
 import com.lifelensiq.app.util.SettingsStore
 import com.lifelensiq.app.util.TimeUtils
+import com.lifelensiq.app.util.DeviceIdProvider
+import com.lifelensiq.app.util.WebCategoryMapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -79,7 +81,7 @@ object WidgetRenderer {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val stats = loadStats(context)
-                views.setTextViewText(R.id.stat_study, "${stats.studyMin}m")
+                views.setTextViewText(R.id.stat_study, "${stats.productiveMin}m")
                 views.setTextViewText(R.id.stat_screen, "${stats.screenMin}m")
                 views.setTextViewText(R.id.stat_shorts, stats.shorts.toString())
                 views.setTextViewText(R.id.stat_steps, stats.steps.toString())
@@ -91,26 +93,36 @@ object WidgetRenderer {
         }
     }
 
-    data class WidgetStats(val studyMin: Long, val screenMin: Long, val shorts: Long, val steps: Long)
+    data class WidgetStats(val productiveMin: Long, val screenMin: Long, val shorts: Long, val steps: Long)
 
     suspend fun loadStats(context: Context): WidgetStats {
         val todayStart = TimeUtils.todayEpochStart()
         val now = TimeUtils.now()
+        val deviceId = DeviceIdProvider.get(context)
+        val overrides = SettingsStore.categoryOverrides()
         val events = AppDatabase.get(context).eventDao().getBetween(todayStart, now)
-        var studyMs = 0L
+            .filter { it.deviceId == deviceId }
+        var productiveMs = 0L
         var screenMs = 0L
         var shorts = 0L
         var steps = 0L
         events.forEach { e ->
             when (e.eventType) {
-                EventType.STUDY_SESSION.id -> studyMs += payloadLong(e, "durationMs")
-                EventType.APP_SESSION.id -> screenMs += payloadLong(e, "durationMs")
+                EventType.STUDY_SESSION.id -> productiveMs += payloadLong(e, "durationMs")
+                EventType.APP_SESSION.id -> {
+                    screenMs += payloadLong(e, "durationMs")
+                    val cat = WebCategoryMapper.categoryForPackage(payloadString(e, "packageName"), overrides)
+                    if (WebCategoryMapper.isProductive(cat)) productiveMs += payloadLong(e, "durationMs")
+                }
                 EventType.SHORT_VIDEO.id -> shorts += payloadLong(e, "views")
                 EventType.STEPS.id -> steps += payloadLong(e, "stepDelta")
             }
         }
-        return WidgetStats(studyMs / 60_000, screenMs / 60_000, shorts, steps)
+        return WidgetStats(productiveMs / 60_000, screenMs / 60_000, shorts, steps)
     }
+
+    private fun payloadString(e: com.lifelensiq.app.data.local.EventEntity, key: String): String =
+        (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
 
     private fun payloadLong(e: com.lifelensiq.app.data.local.EventEntity, key: String): Long =
         (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)

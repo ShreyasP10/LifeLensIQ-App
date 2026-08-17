@@ -20,6 +20,10 @@ object WebCategoryMapper {
     const val UTILITIES = "Utilities"
     const val OTHER = "Other"
 
+    /** Categories that count as productive time (incl. LinkedIn, GitHub, etc.). */
+    fun isProductive(category: String): Boolean =
+        category in setOf(STUDY, DSA, DEVELOPMENT, PRODUCTIVITY)
+
     /** eventType-independent device events have no duration and are neutral. */
     private val neutralTypes = setOf(
         EventType.SCREEN_ON.id, EventType.SCREEN_OFF.id, EventType.UNLOCK.id,

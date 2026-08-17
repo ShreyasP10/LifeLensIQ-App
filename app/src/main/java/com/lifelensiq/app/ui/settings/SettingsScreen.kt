@@ -211,7 +211,7 @@ fun SettingsScreen(vm: SettingsViewModel, nav: NavHostController) {
                 OutlinedTextField(
                     value = studyGoal,
                     onValueChange = { studyGoal = it.filter(Char::isDigit).take(4) },
-                    label = { Text("Daily study goal (minutes)") },
+                    label = { Text("Daily productive goal (minutes)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium

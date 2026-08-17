@@ -244,7 +244,7 @@ fun SessionsScreen(vm: SessionsViewModel) {
             Column(Modifier.padding(16.dp)) {
                 Text("Quick log", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
-                    "Add a study session you finished without the timer — shows up in history and syncs to the website.",
+                    "Add a productive session you finished without the timer — shows up in history and syncs to the website.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -280,7 +280,7 @@ fun SessionsScreen(vm: SessionsViewModel) {
                 ) {
                     Icon(Icons.Outlined.PlayArrow, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Log study session")
+                    Text("Log productive session")
                 }
             }
         }

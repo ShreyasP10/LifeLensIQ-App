@@ -2,6 +2,7 @@ package com.lifelensiq.app.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,9 +14,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -26,6 +36,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -98,7 +109,7 @@ fun WeeklyBarChart(
             }
         }
         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            LegendDot(studyColor, "Study")
+            LegendDot(studyColor, "Productive")
             Spacer(Modifier.width(12.dp))
             LegendDot(barColor, "Screen")
         }
@@ -262,79 +273,130 @@ fun DonutChart(
     }
 }
 
-/** GitHub-style productivity heatmap (13 weeks), mirrors the website calendar. */
+/** Month-grid productivity calendar: days are colored by productive minutes
+ *  (days run 02:00-02:00), with month navigation and a today highlight. */
 @Composable
-fun StreakHeatmap(
+fun ProductivityCalendar(
     minutesByDay: Map<LocalDate, Long>,
     modifier: Modifier = Modifier
 ) {
-    val levelColors = listOf(
-        MaterialTheme.colorScheme.surfaceVariant,
-        Color(0xFFC8E6C9),
-        Color(0xFF81C784),
-        Color(0xFF4CAF50),
-        Color(0xFF2E7D32),
-        Color(0xFF1B5E20)
-    )
+    var monthOffset by remember { mutableIntStateOf(0) }
     val today = LocalDate.now()
-    val start = today.minusDays(12 * 7L) // 13 weeks
-    val textMeasurer = rememberTextMeasurer()
-    val monthStyle = androidx.compose.ui.text.TextStyle(
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontSize = 8.sp
-    )
+    val shown = today.withDayOfMonth(1).plusMonths(monthOffset.toLong())
+    val daysInMonth = shown.lengthOfMonth()
+    val leading = shown.withDayOfMonth(1).dayOfWeek.value % 7 // 0 = Sunday
+    val cellSize = 40.dp
+    val base = CategoryColors.STUDY
+
+    fun level(minutes: Long): Float = when {
+        minutes <= 0 -> 0.12f
+        minutes < 30 -> 0.28f
+        minutes < 90 -> 0.5f
+        minutes < 180 -> 0.72f
+        else -> 1f
+    }
+
+    fun colorOf(date: LocalDate): Color =
+        base.copy(alpha = level(minutesByDay[date] ?: 0L))
 
     Column(modifier) {
-        Canvas(modifier = Modifier.fillMaxWidth().height(118.dp)) {
-            val cell = 12.dp.toPx()
-            val gap = 3.dp.toPx()
-            val weeks = 13
-            val colWidth = cell + gap
-            var lastMonth = start.month
-            repeat(weeks) { w ->
-                val weekStart = start.plusWeeks(w.toLong())
-                val first = weekStart.let { if (it.isBefore(today.minusDays(90))) today.minusDays(90) else it }
-                if (first.month != lastMonth || w == 0) {
-                    lastMonth = first.month
-                    val label = first.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
-                    val layout = textMeasurer.measure(label, monthStyle)
-                    drawText(layout, topLeft = Offset(w * colWidth, 0f))
-                }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            IconButton(onClick = { monthOffset -= 1 }) {
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, contentDescription = "Previous month")
             }
-            // Cells: rows Mon..Sun, columns weeks (oldest left)
-            for (w in 0 until weeks) {
-                for (d in 0 until 7) {
-                    val date = start.plusWeeks(w.toLong()).plusDays(d.toLong())
-                    if (date.isAfter(today)) continue
-                    val minutes = minutesByDay[date] ?: 0L
-                    val level = when {
-                        minutes <= 0 -> 0
-                        minutes < 30 -> 1
-                        minutes < 60 -> 2
-                        minutes < 120 -> 3
-                        minutes < 180 -> 4
-                        else -> 5
+            Text(
+                text = shown.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault()) +
+                    " ${shown.year}",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = { monthOffset += 1 }, enabled = monthOffset < 0) {
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = "Next month")
+            }
+        }
+
+        Row(Modifier.fillMaxWidth()) {
+            listOf("S", "M", "T", "W", "T", "F", "S").forEach { label ->
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+
+        val cells = mutableListOf<LocalDate?>()
+        repeat(leading) { cells.add(null) }
+        for (d in 1..daysInMonth) cells.add(shown.withDayOfMonth(d))
+        while (cells.size % 7 != 0) cells.add(null)
+
+        cells.chunked(7).forEach { week ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                week.forEach { date ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(3.dp)
+                            .let { box ->
+                                if (date != null) {
+                                    val m = minutesByDay[date] ?: 0L
+                                    val borderColor = when {
+                                        date == today -> MaterialTheme.colorScheme.primary
+                                        else -> MaterialTheme.colorScheme.outlineVariant
+                                    }
+                                    box
+                                        .background(colorOf(date), RoundedCornerShape(8.dp))
+                                        .border(
+                                            width = if (date == today) 2.dp else 1.dp,
+                                            color = borderColor,
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                } else box
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (date != null) {
+                            val minutes = minutesByDay[date] ?: 0L
+                            Text(
+                                text = date.dayOfMonth.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (minutes >= 30) Color.White else MaterialTheme.colorScheme.onSurface,
+                                fontWeight = if (date == today) FontWeight.Bold else FontWeight.Normal
+                            )
+                            if (minutes >= 60) {
+                                Box(
+                                    Modifier.align(Alignment.BottomEnd).padding(4.dp)
+                                ) {
+                                    Text(
+                                        "${(minutes / 60).coerceAtMost(9)}h",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
                     }
-                    drawRoundRect(
-                        color = levelColors[level],
-                        topLeft = Offset(w * colWidth, 10.dp.toPx() + d * colWidth),
-                        size = Size(cell, cell),
-                        cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
-                    )
                 }
             }
         }
+
+        Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Less", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(4.dp))
-            levelColors.forEach { color ->
-                Box(Modifier.padding(1.dp).size(10.dp).background(color, RoundedCornerShape(2.dp)))
+            listOf(0.12f, 0.28f, 0.5f, 0.72f, 1f).forEach { a ->
+                Box(Modifier.padding(1.dp).size(10.dp).background(base.copy(alpha = a), RoundedCornerShape(2.dp)))
             }
             Spacer(Modifier.width(4.dp))
             Text("More", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.weight(1f))
             Text(
-                "Study minutes per day",
+                "Productive minutes per day",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

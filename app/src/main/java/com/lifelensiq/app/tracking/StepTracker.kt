@@ -14,15 +14,20 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Step counter via TYPE_STEP_COUNTER (cumulative since boot).
+ * Step counter via TYPE_STEP_COUNTER (cumulative since boot) with a
+ * TYPE_STEP_DETECTOR fallback for devices without a step counter sensor.
  * Deltas are accumulated and emitted as one batched STEPS event every
  * FLUSH_INTERVAL_MS instead of one event per sensor tick.
- * No-op if permission missing or sensor absent.
+ * No-op if permission missing or both sensors absent.
  */
 class StepTracker(context: Context) {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val sensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+    private val sensor: Sensor? =
+        sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+            ?: sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+    private val isDetectorFallback: Boolean =
+        sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) == null
     private val lock = Any()
 
     private var lastSteps: Int = 0
@@ -42,14 +47,20 @@ class StepTracker(context: Context) {
 
     private val listener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
-            val cumulative = event.values[0].toInt()
             synchronized(lock) {
-                val delta = (cumulative - lastSteps).coerceAtLeast(0)
-                if (lastSteps > 0 && delta > 0) {
-                    pendingDelta += delta
-                    lastCumulative = cumulative
+                if (isDetectorFallback) {
+                    // Each STEP_DETECTOR event is exactly one step.
+                    pendingDelta += 1
+                    lastCumulative += 1
+                } else {
+                    val cumulative = event.values[0].toInt()
+                    val delta = (cumulative - lastSteps).coerceAtLeast(0)
+                    if (lastSteps > 0 && delta > 0) {
+                        pendingDelta += delta
+                        lastCumulative = cumulative
+                    }
+                    lastSteps = cumulative
                 }
-                lastSteps = cumulative
             }
         }
 
@@ -60,7 +71,8 @@ class StepTracker(context: Context) {
         if (registered || sensor == null) return
         emitterRef = emitter
         scopeRef = scope
-        sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        val ok = sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        if (!ok) return
         registered = true
         isRunning = true
         scope.launch {

@@ -58,12 +58,15 @@ import com.lifelensiq.app.ui.settings.SettingsScreen
 import com.lifelensiq.app.ui.settings.SettingsViewModel
 import com.lifelensiq.app.ui.trends.TrendsScreen
 import com.lifelensiq.app.ui.trends.TrendsViewModel
+import com.lifelensiq.app.ui.website.WebsiteScreen
+import com.lifelensiq.app.ui.website.WebsiteViewModel
 import com.lifelensiq.app.util.SettingsStore
 import kotlinx.coroutines.delay
 
 object Routes {
     const val LOGIN = "login"
     const val HOME = "home"
+    const val WEBSITE = "website"
     const val ACTIVITY = "activity"
     const val CATEGORY = "category/{category}"
     const val SESSIONS = "sessions"
@@ -75,7 +78,7 @@ object Routes {
     fun category(name: String): String = "category/${Uri.encode(name)}"
 }
 
-private val TAB_ROUTES = listOf(Routes.HOME, Routes.ACTIVITY, Routes.SESSIONS, Routes.TRENDS, Routes.SETTINGS)
+private val TAB_ROUTES = listOf(Routes.HOME, Routes.WEBSITE, Routes.ACTIVITY, Routes.SESSIONS, Routes.TRENDS, Routes.SETTINGS)
 
 /** Screens with a back arrow instead of a selected bottom tab. */
 private val DETAIL_ROUTES = listOf(Routes.CATEGORY, Routes.EXPORT, Routes.CATEGORY_OVERRIDES)
@@ -212,9 +215,22 @@ fun AppNavHost(
 
             composable(Routes.HOME) {
                 val vm: HomeViewModel = viewModel {
-                    HomeViewModel(ServiceLocator.eventRepository())
+                    HomeViewModel(
+                        ServiceLocator.eventRepository(),
+                        com.lifelensiq.app.util.DeviceIdProvider.get(ServiceLocator.context())
+                    )
                 }
                 HomeScreen(vm, navController)
+            }
+
+            composable(Routes.WEBSITE) {
+                val vm: WebsiteViewModel = viewModel {
+                    WebsiteViewModel(
+                        ServiceLocator.eventRepository(),
+                        com.lifelensiq.app.util.DeviceIdProvider.get(ServiceLocator.context())
+                    )
+                }
+                WebsiteScreen(vm)
             }
 
             composable(Routes.ACTIVITY) {
@@ -283,8 +299,9 @@ fun AppNavHost(
 
 private fun topBarTitleFor(route: String?): String = when (route) {
     Routes.HOME -> "LifeLens IQ"
+    Routes.WEBSITE -> "Website Stats"
     Routes.ACTIVITY -> "Today's Activity"
-    Routes.SESSIONS -> "Study Sessions"
+    Routes.SESSIONS -> "Productive Sessions"
     Routes.TRENDS -> "Trends"
     Routes.SETTINGS -> "Settings"
     Routes.EXPORT -> "Export Data"

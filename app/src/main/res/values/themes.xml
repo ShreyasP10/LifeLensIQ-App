@@ -2,5 +2,14 @@
 <resources>
     <style name="Theme.LifeLensIQ" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">#1A237E</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Android 12+ splash screen (backported to older versions by core-splashscreen). -->
+    <style name="Theme.LifeLensIQ.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#1A237E</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">#1A237E</item>
+        <item name="postSplashScreenTheme">@style/Theme.LifeLensIQ</item>
     </style>
 </resources>
