@@ -64,24 +64,41 @@ class HomeViewModel(
                 val todayStart = TimeUtils.todayEpochStart()
                 val now = System.currentTimeMillis()
 
-                // Phone-only: ignore events that came from the website.
-                val phone = all.filter { it.deviceId == deviceId }
-                val todayEvents = phone.filter { it.timestamp >= todayStart }
+                // Use all events for productivity/screen time to include website sessions.
+                // deviceId filter is only for device-specific stats like pickups/wake.
+                val todayEvents = all.filter { it.timestamp >= todayStart }
                 val overrides = SettingsStore.categoryOverrides()
 
-                fun productiveOf(e: EventEntity): Long = when (e.eventType) {
-                    EventType.STUDY_SESSION.id -> payloadLong(e, "durationMs")
-                    EventType.APP_SESSION.id -> {
-                        val pkg = payloadString(e, "packageName")
-                        val cat = WebCategoryMapper.categoryForPackage(pkg, overrides)
-                        if (WebCategoryMapper.isProductive(cat)) payloadLong(e, "durationMs") else 0L
+                fun categoryOf(e: EventEntity): String? {
+                    val payloadCat = payloadString(e, "category")
+                    if (payloadCat.isNotBlank()) return payloadCat
+                    return when (e.eventType) {
+                        EventType.APP_SESSION.id -> WebCategoryMapper.categoryForPackage(payloadString(e, "packageName"), overrides)
+                        EventType.SHORT_VIDEO.id -> WebCategoryMapper.SHORT_FORM
+                        EventType.STUDY_SESSION.id -> WebCategoryMapper.STUDY
+                        else -> {
+                            val domain = payloadString(e, "domain")
+                            val path = payloadString(e, "path")
+                            val id = domain.ifBlank { path }.ifBlank { null }
+                            WebCategoryMapper.categoryFor(e.eventType, id)
+                        }
                     }
-                    else -> 0L
                 }
 
-                val productiveMsToday = todayEvents.sumOf { productiveOf(it) }
-                val appEvents = todayEvents.filter { it.eventType == EventType.APP_SESSION.id }
-                val screenMsToday = appEvents.sumOf { payloadLong(it, "durationMs") }
+                fun isSession(e: EventEntity): Boolean {
+                    if (e.deviceId != deviceId && e.deviceId.isNotBlank()) return true
+                    return e.eventType == EventType.APP_SESSION.id ||
+                            e.eventType == EventType.SHORT_VIDEO.id ||
+                            e.eventType == EventType.STUDY_SESSION.id
+                }
+
+                fun productiveMsOf(e: EventEntity): Long {
+                    val cat = categoryOf(e) ?: return 0L
+                    return if (WebCategoryMapper.isProductive(cat)) payloadLong(e, "durationMs") else 0L
+                }
+
+                val productiveMsToday = todayEvents.sumOf { productiveMsOf(it) }
+                val screenMsToday = todayEvents.filter { isSession(it) }.sumOf { payloadLong(it, "durationMs") }
 
                 val weeklyProductive = mutableListOf<Long>()
                 val weeklyScreen = mutableListOf<Long>()
@@ -89,18 +106,18 @@ class HomeViewModel(
                 for (day in 0 until 7) {
                     val dayStart = todayStart - (6 - day) * 86_400_000L
                     val dayEnd = dayStart + 86_400_000L
-                    val dayEvents = phone.filter { it.timestamp in dayStart until dayEnd }
-                    weeklyProductive.add(dayEvents.sumOf { productiveOf(it) } / 60_000)
-                    weeklyScreen.add(dayEvents.filter { it.eventType == EventType.APP_SESSION.id }
-                        .sumOf { payloadLong(it, "durationMs") } / 60_000)
+                    val dayEvents = all.filter { it.timestamp in dayStart until dayEnd }
+                    weeklyProductive.add(dayEvents.sumOf { productiveMsOf(it) } / 60_000)
+                    weeklyScreen.add(dayEvents.filter { isSession(it) }.sumOf { payloadLong(it, "durationMs") } / 60_000)
                 }
                 // Calendar: last 90 days of productive minutes, aligned to 02:00 days
                 val calendarStart = TimeUtils.dayStartFor(now) - 90L * 86_400_000
-                phone.forEach { e ->
-                    val day = java.time.Instant.ofEpochMilli(TimeUtils.dayStartFor(e.timestamp))
-                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-                    if (TimeUtils.dayStartFor(e.timestamp) >= calendarStart) {
-                        calendar[day] = (calendar[day] ?: 0L) + productiveOf(e)
+                all.forEach { e ->
+                    val dayTs = TimeUtils.dayStartFor(e.timestamp)
+                    if (dayTs >= calendarStart) {
+                        val day = java.time.Instant.ofEpochMilli(dayTs)
+                            .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                        calendar[day] = (calendar[day] ?: 0L) + (productiveMsOf(e) / 60_000)
                     }
                 }
                 calendar.entries.removeIf { it.value <= 0 }
@@ -116,13 +133,14 @@ class HomeViewModel(
                 //  - firstWake    : first screen-on after 02:00
                 //  - lastShutdown : last screen-off before 02:00 (yesterday's last use)
                 //  - sleep        : last shutdown before 02:00 -> first wake after 02:00
-                val screenOnToday = todayEvents.filter { it.eventType == EventType.SCREEN_ON.id }
+                val phoneEvents = all.filter { it.deviceId == deviceId }
+                val screenOnToday = todayEvents.filter { it.eventType == EventType.SCREEN_ON.id && it.deviceId == deviceId }
                     .sortedBy { it.timestamp }
                 val firstWake = screenOnToday.firstOrNull()?.timestamp?.let(::timeLabel)
-                val lastShutdown = phone.filter {
+                val lastShutdown = phoneEvents.filter {
                     it.eventType == EventType.SCREEN_OFF.id && it.timestamp < todayStart
                 }.maxOfOrNull { it.timestamp }?.let(::timeLabel)
-                val bedtime = phone.filter {
+                val bedtime = phoneEvents.filter {
                     it.eventType == EventType.SCREEN_OFF.id && it.timestamp in (todayStart - 86_400_000L) until todayStart
                 }.maxOfOrNull { it.timestamp }
                 val wake = screenOnToday.firstOrNull()?.timestamp
@@ -131,6 +149,7 @@ class HomeViewModel(
                     ?.takeIf { it in 2_700_000L..14 * 3600_000L }
                     ?.let { formatMinutes(it / 60_000) }
 
+                val appEvents = todayEvents.filter { isSession(it) }
                 _uiState.update {
                     it.copy(
                         productiveMinutesToday = productiveMsToday / 60_000,

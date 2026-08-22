@@ -83,21 +83,21 @@ fun CategoryDetailScreen(vm: CategoryDetailViewModel, category: String) {
             }
         }
 
-        val max = state.apps.firstOrNull()?.minutes?.coerceAtLeast(1) ?: 1
+        val max = (state.apps.firstOrNull()?.durationMs ?: 1L).coerceAtLeast(1L)
         items(state.apps, key = { it.name + it.category }) { app ->
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))) {
                 Column(Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(app.name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1)
                         Text(
-                            formatDuration(app.minutes),
+                            formatDuration(app.durationMs / 60_000),
                             fontWeight = FontWeight.Bold,
                             color = color
                         )
                     }
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(
-                        progress = { app.minutes.toFloat() / max },
+                        progress = { app.durationMs.toFloat() / max },
                         color = color,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier.fillMaxWidth().height(6.dp),

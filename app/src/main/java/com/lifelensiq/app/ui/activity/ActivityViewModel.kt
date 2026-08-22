@@ -25,7 +25,7 @@ data class CategoryUsage(
 
 data class AppUsageItem(
     val name: String,
-    val minutes: Long,
+    val durationMs: Long,
     val sessions: Int,
     val category: String
 )
@@ -70,7 +70,8 @@ class ActivityViewModel(
                     restartCollection()
                     return@collect
                 }
-                cachedEvents = list.filter { it.deviceId == deviceId }
+                // Include both local phone events and synced website events for a unified total.
+                cachedEvents = list
                 _uiState.value = buildState(cachedEvents)
             }
         }
@@ -83,50 +84,36 @@ class ActivityViewModel(
         val byCategory = linkedMapOf<String, MutableList<AppUsageItem>>()
 
         list.forEach { event ->
-            when (event.eventType) {
-                EventType.APP_SESSION.id -> {
-                    val pkg = payloadString(event, "packageName")
-                    val category = WebCategoryMapper.categoryForPackage(pkg, overrides)
-                    val name = payloadString(event, "appName").takeIf { it.isNotBlank() } ?: pkg
-                    byCategory.getOrPut(category) { mutableListOf() }.add(
-                        AppUsageItem(
-                            name = name,
-                            minutes = durationMinutes(event),
-                            sessions = 1,
-                            category = category
-                        )
-                    )
+            val category = categoryOf(event, overrides) ?: return@forEach
+            val name = when (event.eventType) {
+                EventType.APP_SESSION.id -> payloadString(event, "appName").takeIf { it.isNotBlank() } ?: payloadString(event, "packageName")
+                EventType.SHORT_VIDEO.id -> "Reels / Shorts"
+                EventType.STUDY_SESSION.id -> "Study session"
+                else -> {
+                    // For website events, title/domain/path are in payload
+                    payloadString(event, "title").ifBlank {
+                        payloadString(event, "domain").ifBlank {
+                            payloadString(event, "path").ifBlank { event.eventType }
+                        }
+                    }
                 }
-                EventType.SHORT_VIDEO.id -> {
-                    val views = payloadInt(event, "views")
-                    byCategory.getOrPut(WebCategoryMapper.SHORT_FORM) { mutableListOf() }.add(
-                        AppUsageItem(
-                            name = "Reels / Shorts",
-                            minutes = durationMinutes(event),
-                            sessions = views,
-                            category = WebCategoryMapper.SHORT_FORM
-                        )
-                    )
-                }
-                EventType.STUDY_SESSION.id -> {
-                    byCategory.getOrPut(WebCategoryMapper.STUDY) { mutableListOf() }.add(
-                        AppUsageItem(
-                            name = "Study session",
-                            minutes = durationMinutes(event),
-                            sessions = 1,
-                            category = WebCategoryMapper.STUDY
-                        )
-                    )
-                }
-                else -> Unit
             }
+
+            byCategory.getOrPut(category) { mutableListOf() }.add(
+                AppUsageItem(
+                    name = name,
+                    durationMs = durationMs(event),
+                    sessions = if (event.eventType == EventType.SHORT_VIDEO.id) payloadInt(event, "views") else 1,
+                    category = category
+                )
+            )
         }
 
         val categories = byCategory.map { (category, apps) ->
-            val totalMin = apps.sumOf { it.minutes }
+            val totalMs = apps.sumOf { it.durationMs }
             CategoryUsage(
                 category = category,
-                minutes = totalMin,
+                minutes = totalMs / 60_000,
                 appSessions = apps.sumOf { it.sessions },
                 appCount = apps.map { it.name }.distinct().size,
                 shortsViews = if (category == WebCategoryMapper.SHORT_FORM) apps.sumOf { it.sessions } else 0
@@ -138,12 +125,12 @@ class ActivityViewModel(
             .map { (key, items) ->
                 AppUsageItem(
                     name = key.first,
-                    minutes = items.sumOf { it.minutes },
+                    durationMs = items.sumOf { it.durationMs },
                     sessions = items.sumOf { it.sessions },
                     category = key.second
                 )
             }
-            .sortedByDescending { it.minutes }
+            .sortedByDescending { it.durationMs }
             .take(8)
 
         return ActivityUiState(
@@ -155,8 +142,26 @@ class ActivityViewModel(
         )
     }
 
-    private fun durationMinutes(e: EventEntity): Long =
-        payloadLong(e, "durationMs") / 60_000
+    private fun durationMs(e: EventEntity): Long =
+        payloadLong(e, "durationMs")
+
+    private fun categoryOf(e: EventEntity, overrides: Map<String, String>): String? {
+        // If the event already has a category (likely from website sync), use it.
+        val payloadCat = payloadString(e, "category")
+        if (payloadCat.isNotBlank()) return payloadCat
+
+        return when (e.eventType) {
+            EventType.APP_SESSION.id -> WebCategoryMapper.categoryForPackage(payloadString(e, "packageName"), overrides)
+            EventType.SHORT_VIDEO.id -> WebCategoryMapper.SHORT_FORM
+            EventType.STUDY_SESSION.id -> WebCategoryMapper.STUDY
+            else -> {
+                // For other events (like website events without a category field yet)
+                val domain = payloadString(e, "domain")
+                val path = payloadString(e, "path")
+                WebCategoryMapper.categoryFor(e.eventType, domain.ifBlank { path }.ifBlank { null })
+            }
+        }
+    }
 
     private fun payloadString(e: EventEntity, key: String): String =
         (JsonUtil.decodePayload(e.payloadJson)[key] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
