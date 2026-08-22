@@ -40,53 +40,62 @@ class CategoryDetailViewModel(
                     .map { (key, items) ->
                         AppUsageItem(
                             name = key.first,
-                            minutes = items.sumOf { it.minutes },
+                            durationMs = items.sumOf { it.durationMs },
                             sessions = items.sumOf { it.sessions },
                             category = key.second
                         )
                     }
-                    .sortedByDescending { it.minutes }
+                    .sortedByDescending { it.durationMs }
                 _uiState.value = CategoryDetailState(
                     loading = false,
-                    totalMinutes = apps.sumOf { it.minutes },
+                    totalMinutes = apps.sumOf { it.durationMs } / 60_000,
                     apps = apps
                 )
             }
         }
     }
 
-    private fun categoryOf(e: EventEntity): String? = when (e.eventType) {
-        EventType.APP_SESSION.id -> WebCategoryMapper.categoryForPackage(payloadString(e, "packageName"), overrides)
-        EventType.SHORT_VIDEO.id -> WebCategoryMapper.SHORT_FORM
-        EventType.STUDY_SESSION.id -> WebCategoryMapper.STUDY
-        else -> null
+    private fun categoryOf(e: EventEntity): String? {
+        val payloadCat = payloadString(e, "category")
+        if (payloadCat.isNotBlank()) return payloadCat
+
+        return when (e.eventType) {
+            EventType.APP_SESSION.id -> WebCategoryMapper.categoryForPackage(payloadString(e, "packageName"), overrides)
+            EventType.SHORT_VIDEO.id -> WebCategoryMapper.SHORT_FORM
+            EventType.STUDY_SESSION.id -> WebCategoryMapper.STUDY
+            else -> {
+                val domain = payloadString(e, "domain")
+                val path = payloadString(e, "path")
+                WebCategoryMapper.categoryFor(e.eventType, domain.ifBlank { path }.ifBlank { null })
+            }
+        }
     }
 
     private val overrides = SettingsStore.categoryOverrides()
 
-    private fun itemFor(e: EventEntity): AppUsageItem? = when (e.eventType) {
-        EventType.APP_SESSION.id -> {
-            val pkg = payloadString(e, "packageName")
-            AppUsageItem(
-                name = payloadString(e, "appName").takeIf { it.isNotBlank() } ?: pkg,
-                minutes = payloadLong(e, "durationMs") / 60_000,
-                sessions = 1,
-                category = WebCategoryMapper.categoryForPackage(pkg, overrides)
-            )
+    private fun itemFor(e: EventEntity): AppUsageItem? {
+        val cat = categoryOf(e) ?: return null
+        val name = when (e.eventType) {
+            EventType.APP_SESSION.id -> {
+                val pkg = payloadString(e, "packageName")
+                payloadString(e, "appName").takeIf { it.isNotBlank() } ?: pkg
+            }
+            EventType.SHORT_VIDEO.id -> "Reels / Shorts"
+            EventType.STUDY_SESSION.id -> "Study session"
+            else -> {
+                payloadString(e, "title").ifBlank {
+                    payloadString(e, "domain").ifBlank {
+                        payloadString(e, "path").ifBlank { e.eventType }
+                    }
+                }
+            }
         }
-        EventType.SHORT_VIDEO.id -> AppUsageItem(
-            name = "Reels / Shorts",
-            minutes = payloadLong(e, "durationMs") / 60_000,
-            sessions = payloadInt(e, "views"),
-            category = WebCategoryMapper.SHORT_FORM
+        return AppUsageItem(
+            name = name,
+            durationMs = payloadLong(e, "durationMs"),
+            sessions = if (e.eventType == EventType.SHORT_VIDEO.id) payloadInt(e, "views") else 1,
+            category = cat
         )
-        EventType.STUDY_SESSION.id -> AppUsageItem(
-            name = "Study session",
-            minutes = payloadLong(e, "durationMs") / 60_000,
-            sessions = 1,
-            category = WebCategoryMapper.STUDY
-        )
-        else -> null
     }
 
     private fun payloadString(e: EventEntity, key: String): String =

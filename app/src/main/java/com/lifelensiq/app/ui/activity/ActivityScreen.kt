@@ -231,7 +231,7 @@ private fun AppRow(app: AppUsageItem) {
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                "${formatDuration(app.minutes)} · ${app.sessions}",
+                "${formatDuration(app.durationMs / 60_000)} · ${app.sessions}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
