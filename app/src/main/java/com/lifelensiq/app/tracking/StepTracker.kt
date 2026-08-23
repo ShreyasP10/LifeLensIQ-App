@@ -54,6 +54,11 @@ class StepTracker(context: Context) {
                     lastCumulative += 1
                 } else {
                     val cumulative = event.values[0].toInt()
+                    // Handle sensor reset (e.g., after reboot)
+                    if (cumulative < lastSteps) {
+                        lastSteps = cumulative
+                        return
+                    }
                     val delta = (cumulative - lastSteps).coerceAtLeast(0)
                     if (lastSteps > 0 && delta > 0) {
                         pendingDelta += delta

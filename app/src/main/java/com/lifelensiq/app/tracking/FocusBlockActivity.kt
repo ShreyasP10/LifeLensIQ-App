@@ -41,6 +41,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Full-screen "Return to focus" notice shown when a blocked app is opened
@@ -52,7 +53,7 @@ class FocusBlockActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        isShowing = true
+        isShowing.set(true)
         setContent {
             FocusBlockContent(
                 subject = SettingsStore.focusSubject,
@@ -74,7 +75,7 @@ class FocusBlockActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        isShowing = false
+        isShowing.set(false)
         scope.cancel()
         super.onDestroy()
     }
@@ -101,9 +102,7 @@ class FocusBlockActivity : ComponentActivity() {
 
     companion object {
         /** Guards against launching multiple block screens from the poller. */
-        @Volatile
-        var isShowing: Boolean = false
-            private set
+        val isShowing = AtomicBoolean(false)
     }
 }
 

@@ -30,38 +30,42 @@ class FirestoreEventSource {
      */
     suspend fun uploadBatch(userId: String, events: List<EventEntity>): Int {
         if (events.isEmpty()) return 0
-        val batch = db.batch()
-        for (event in events) {
-            val payload = JsonUtil.decodePayload(event.payloadJson)
-                .mapValues { (_, v) -> v.toPlain() }
-            val ts = event.timestamp
-            val durationMs = payload["durationMs"]?.let { asLong(it) } ?: 0L
-            val durationSeconds = payload["durationSeconds"]?.let { asLong(it) } ?: (durationMs / 1000)
-            val endTs = ts + durationSeconds * 1000
-            val pkg = payload["packageName"] as? String
-            val doc = db.collection("users").document(userId)
-                .collection("events").document(event.eventId)
-            batch.set(doc, mapOf(
-                "id" to event.eventId,
-                "eventId" to event.eventId,
-                "userId" to event.userId,
-                "deviceId" to event.deviceId,
-                "device" to "android",
-                "ts" to ts,
-                "endTs" to endTs,
-                "durationSeconds" to durationSeconds,
-                "timestamp" to ts,
-                "eventType" to event.eventType,
-                "category" to WebCategoryMapper.categoryFor(event.eventType, pkg),
-                "domain" to WebCategoryMapper.domainFor(pkg),
-                "path" to pkg,
-                "title" to ((payload["appName"] as? String) ?: pkg),
-                "metadata" to payload,
-                "schemaVersion" to event.schemaVersion
-            ).let { JsonUtil.forFirestore(it) })
+        var uploaded = 0
+        for (chunk in events.chunked(500)) {
+            val batch = db.batch()
+            for (event in chunk) {
+                val payload = JsonUtil.decodePayload(event.payloadJson)
+                    .mapValues { (_, v) -> v.toPlain() }
+                val ts = event.timestamp
+                val durationMs = payload["durationMs"]?.let { asLong(it) } ?: 0L
+                val durationSeconds = payload["durationSeconds"]?.let { asLong(it) } ?: (durationMs / 1000)
+                val endTs = ts + durationSeconds * 1000
+                val pkg = payload["packageName"] as? String
+                val doc = db.collection("users").document(userId)
+                    .collection("events").document(event.eventId)
+                batch.set(doc, mapOf(
+                    "id" to event.eventId,
+                    "eventId" to event.eventId,
+                    "userId" to event.userId,
+                    "deviceId" to event.deviceId,
+                    "device" to "android",
+                    "ts" to ts,
+                    "endTs" to endTs,
+                    "durationSeconds" to durationSeconds,
+                    "timestamp" to ts,
+                    "eventType" to event.eventType,
+                    "category" to WebCategoryMapper.categoryFor(event.eventType, pkg),
+                    "domain" to WebCategoryMapper.domainFor(pkg),
+                    "path" to pkg,
+                    "title" to ((payload["appName"] as? String) ?: pkg),
+                    "metadata" to payload,
+                    "schemaVersion" to event.schemaVersion
+                ).let { JsonUtil.forFirestore(it) })
+            }
+            batch.commit().await()
+            uploaded += chunk.size
         }
-        batch.commit().await()
-        return events.size
+        return uploaded
     }
 
     /**

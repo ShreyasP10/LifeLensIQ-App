@@ -42,6 +42,11 @@ class ShortsReelsDetector : AccessibilityService() {
         // Cheap gate first: only our target packages are worth scanning.
         val pkg = event?.packageName?.toString() ?: return
         val platform = PLATFORM_BY_PACKAGE[pkg] ?: return
+        // Close session if the app goes to background (window state changed)
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            closeSessionIfOpen(now)
+            return
+        }
         // Only count on swipe/content signals — not on every frame update.
         if (event.eventType !in COUNT_SIGNAL_TYPES) return
         // Battery guard: never scan more than once per throttle window.

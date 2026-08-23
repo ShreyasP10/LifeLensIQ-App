@@ -15,6 +15,7 @@ class BootReceiver : BroadcastReceiver() {
                 LifeLensIQTrackerService.start(context)
                 SyncScheduler.enqueue(context)
                 InsightScheduler.schedule(context)
+                WatchdogReceiver.scheduleNextCheck(context)
             }
         }
     }
