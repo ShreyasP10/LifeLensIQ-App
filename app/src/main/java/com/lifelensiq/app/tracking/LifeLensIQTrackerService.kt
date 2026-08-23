@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.IBinder
 import com.lifelensiq.app.MainActivity
 import com.lifelensiq.app.R
@@ -45,6 +46,8 @@ class LifeLensIQTrackerService : Service() {
         // Always re-check the step counter (e.g. permission granted while the
         // service was already running) — no-op when it is already running.
         startStepTracker(ServiceLocator.eventEmitter())
+        // Schedule watchdog to ensure we stay alive
+        WatchdogReceiver.scheduleNextCheck(this)
         return START_STICKY
     }
 
@@ -61,8 +64,13 @@ class LifeLensIQTrackerService : Service() {
             screenReceiver.onScreenOff = { wake.onScreenOff() }
         }
 
-        registerReceiver(screenReceiver, screenReceiver.intentFilter())
-        registerReceiver(chargeReceiver, chargeReceiver.intentFilter())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenReceiver, screenReceiver.intentFilter(), RECEIVER_NOT_EXPORTED)
+            registerReceiver(chargeReceiver, chargeReceiver.intentFilter(), RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(screenReceiver, screenReceiver.intentFilter())
+            registerReceiver(chargeReceiver, chargeReceiver.intentFilter())
+        }
 
         scope.launch { emitter.emit(EventType.TRACKING_STATE.id, mapOf("state" to "STARTED")) }
     }
@@ -110,6 +118,7 @@ class LifeLensIQTrackerService : Service() {
         runCatching { unregisterReceiver(chargeReceiver) }
         stepTracker?.stop()
         scope.cancel()
+        WatchdogReceiver.cancel(this)
         super.onDestroy()
     }
 

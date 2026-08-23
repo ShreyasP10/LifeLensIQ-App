@@ -4,7 +4,9 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.PowerManager
+import android.util.Log
 import com.lifelensiq.app.domain.EventType
 import com.lifelensiq.app.util.PermissionUtils
 import kotlinx.coroutines.delay
@@ -30,12 +32,24 @@ class AppUsagePoller(
     private val powerManager: PowerManager
         get() = context.getSystemService(Context.POWER_SERVICE) as PowerManager
 
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("lifelensiq_tracker", Context.MODE_PRIVATE)
+
+    private val TAG = "AppUsagePoller"
+
+    init {
+        restoreState()
+    }
+
     fun usageAccessGranted(): Boolean = PermissionUtils.isUsageAccessGranted(context)
 
     suspend fun pollLoop() {
         wasGranted = usageAccessGranted()
+        Log.d(TAG, "Starting poll loop, granted=$wasGranted")
         while (true) {
-            runCatching { pollOnce() }
+            runCatching { pollOnce() }.onFailure { e ->
+                Log.e(TAG, "pollOnce failed", e)
+            }
             delay(pollIntervalMs())
         }
     }
@@ -49,6 +63,7 @@ class AppUsagePoller(
             closeCurrentIfIdle()
             if (wasGranted) {
                 wasGranted = false
+                Log.w(TAG, "Usage access revoked")
                 emitter.emit(
                     EventType.TRACKING_STATE.id,
                     mapOf("state" to "PAUSED", "reason" to "PERMISSION_REVOKED")
@@ -58,6 +73,7 @@ class AppUsagePoller(
         }
         if (!wasGranted) {
             wasGranted = true
+            Log.i(TAG, "Usage access granted")
             emitter.emit(EventType.TRACKING_STATE.id, mapOf("state" to "STARTED", "reason" to "PERMISSION_GRANTED"))
         }
         val now = System.currentTimeMillis()
@@ -85,6 +101,7 @@ class AppUsagePoller(
         if (currentBackgroundedAt != null) {
             // The tracked app went to the background in this window — end the
             // session exactly there instead of waiting for a new foreground.
+            Log.d(TAG, "Background event for $currentPackage at $currentBackgroundedAt")
             closeCurrent(currentBackgroundedAt)
             return
         }
@@ -94,13 +111,16 @@ class AppUsagePoller(
             val candidate = fg.first.takeIf { pkg -> !isSystem(pkg) }
             if (candidate == null) {
                 // Foreground switched to a system app (launcher/home) → session ended.
+                Log.d(TAG, "System app foreground, closing session")
                 closeCurrent(now)
                 return
             }
             if (candidate != currentPackage) {
+                Log.d(TAG, "App switch: $currentPackage -> $candidate")
                 closeCurrent(now)
                 currentPackage = candidate
                 currentStart = fg.second
+                saveState()
             }
             checkFocusBlock(candidate)
             return
@@ -117,17 +137,20 @@ class AppUsagePoller(
         ).filter { it.lastTimeUsed >= now - BOOTSTRAP_WINDOW_MS && !isSystem(it.packageName) }
             .maxByOrNull { it.lastTimeUsed }
         if (recent != null) {
+            Log.d(TAG, "Bootstrap session: ${recent.packageName} at ${recent.lastTimeUsed}")
             currentPackage = recent.packageName
             currentStart = recent.lastTimeUsed
+            saveState()
         }
     }
 
     /** Focus mode: pull the user back when a blocked app comes to foreground. */
     private fun checkFocusBlock(pkg: String) {
         if (!com.lifelensiq.app.util.SettingsStore.focusActive) return
-        if (FocusBlockActivity.isShowing) return
+        if (FocusBlockActivity.isShowing.get()) return
         if (pkg == context.packageName) return
         if (pkg !in com.lifelensiq.app.util.SettingsStore.focusBlockedApps()) return
+        if (!FocusBlockActivity.isShowing.compareAndSet(false, true)) return
         runCatching {
             val intent = Intent(context, FocusBlockActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
@@ -138,6 +161,9 @@ class AppUsagePoller(
     private suspend fun closeCurrent(now: Long) {
         val pkg = currentPackage ?: return
         currentPackage = null
+        currentStart = 0L
+        clearState()
+        Log.d(TAG, "Closing session for $pkg, duration=${now - currentStart}ms")
         emitter.emit(
             EventType.APP_SESSION.id,
             mapOf(
@@ -169,6 +195,28 @@ class AppUsagePoller(
         val pm = context.packageManager
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
     }.getOrDefault(pkg)
+
+    private fun saveState() {
+        prefs.edit()
+            .putString("current_package", currentPackage)
+            .putLong("current_start", currentStart)
+            .apply()
+    }
+
+    private fun restoreState() {
+        currentPackage = prefs.getString("current_package", null)
+        currentStart = prefs.getLong("current_start", 0L)
+        if (currentPackage != null) {
+            Log.d(TAG, "Restored session: $currentPackage since $currentStart")
+        }
+    }
+
+    private fun clearState() {
+        prefs.edit()
+            .remove("current_package")
+            .remove("current_start")
+            .apply()
+    }
 
     companion object {
         const val POLL_INTERVAL_MS = 15_000L

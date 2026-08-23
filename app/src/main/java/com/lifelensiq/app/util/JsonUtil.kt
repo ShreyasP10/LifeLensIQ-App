@@ -21,6 +21,8 @@ object JsonUtil {
 
     fun decodePayload(raw: String): JsonObject = runCatching {
         json.parseToJsonElement(raw) as JsonObject
+    }.onFailure { e ->
+        android.util.Log.w("JsonUtil", "Failed to decode payload: $raw", e)
     }.getOrDefault(JsonObject(emptyMap()))
 
     private fun Any?.toJsonElement(): JsonElement = when (this) {
@@ -47,7 +49,7 @@ object JsonUtil {
         is Map<*, *> -> value.entries
             .mapNotNull { (k, v) -> v?.let { stripNulls(it)?.let { k.toString() to it } } }
             .toMap()
-        is Iterable<*> -> value.mapNotNull { stripNulls(it) }.takeIf { it.isNotEmpty() }
+        is Iterable<*> -> value.mapNotNull { stripNulls(it) } // Keep empty lists
         else -> value
     }
 }
