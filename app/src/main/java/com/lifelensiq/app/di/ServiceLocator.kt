@@ -29,7 +29,10 @@ object ServiceLocator {
         eventRepository()
     }
 
-    fun context(): Context = appContext
+    fun context(): Context {
+        return if (::appContext.isInitialized) appContext
+        else throw IllegalStateException("ServiceLocator not initialized. Call ServiceLocator.init(context) in Application.onCreate()")
+    }
 
     private val _db by lazy { AppDatabase.get(appContext) }
     fun db() = _db
