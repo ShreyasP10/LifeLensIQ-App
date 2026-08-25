@@ -25,10 +25,21 @@ class MainActivity : ComponentActivity() {
     ) { /* notification optional — service runs regardless */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        // Splash screen must be installed before super.onCreate()
+        try {
+            installSplashScreen()
+        } catch (e: Exception) {
+            // Splash screen not available, continue without it
+        }
         super.onCreate(savedInstanceState)
 
-        LifeLensIQTrackerService.start(this)
+        // Start tracker service
+        try {
+            LifeLensIQTrackerService.start(this)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to start tracker service", e)
+        }
+
         SyncScheduler.schedule(this)
         SyncScheduler.enqueue(this)
         InsightScheduler.schedule(this)
@@ -41,25 +52,29 @@ class MainActivity : ComponentActivity() {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        // Request battery optimization exemption for reliable background tracking
-        requestIgnoreBatteryOptimizations()
-
         setContent {
             LifeLensIQTheme {
                 AppNavHost(initialRoute = intent.getStringExtra("route"))
             }
         }
+
+        // Request battery optimization exemption after UI is ready
+        requestIgnoreBatteryOptimizations()
     }
 
     private fun requestIgnoreBatteryOptimizations() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val pm = getSystemService(android.os.PowerManager::class.java)
-            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:$packageName")
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val pm = getSystemService(android.os.PowerManager::class.java)
+                if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    startActivity(intent)
                 }
-                startActivity(intent)
             }
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "Battery optimization request failed", e)
         }
     }
 }
