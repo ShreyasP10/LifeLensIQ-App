@@ -41,13 +41,23 @@ class LifeLensIQTrackerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification())
-        startTrackingIfNeeded()
-        // Always re-check the step counter (e.g. permission granted while the
-        // service was already running) — no-op when it is already running.
-        startStepTracker(ServiceLocator.eventEmitter())
-        // Schedule watchdog to ensure we stay alive
-        WatchdogReceiver.scheduleNextCheck(this)
+        try {
+            startForeground(NOTIFICATION_ID, buildNotification())
+        } catch (e: Exception) {
+            // If the foreground notification can't be posted (e.g. permission
+            // or type issue), don't let it crash the whole app process.
+            android.util.Log.e(TAG, "startForeground failed", e)
+        }
+        try {
+            startTrackingIfNeeded()
+            // Always re-check the step counter (e.g. permission granted while the
+            // service was already running) — no-op when it is already running.
+            startStepTracker(ServiceLocator.eventEmitter())
+            // Schedule watchdog to ensure we stay alive
+            WatchdogReceiver.scheduleNextCheck(this)
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Tracking init failed", e)
+        }
         return START_STICKY
     }
 
@@ -123,6 +133,7 @@ class LifeLensIQTrackerService : Service() {
     }
 
     companion object {
+        private const val TAG = "LifeLensIQTracker"
         private const val CHANNEL_ID = "lifelensiq_tracking"
         private const val NOTIFICATION_ID = 1001
 
