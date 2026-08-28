@@ -11,10 +11,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.compose.runtime.remember
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.lifelensiq.app.notifications.InsightScheduler
 import com.lifelensiq.app.sync.SyncScheduler
 import com.lifelensiq.app.tracking.LifeLensIQTrackerService
+import com.lifelensiq.app.ui.components.CrashReportScreen
 import com.lifelensiq.app.ui.navigation.AppNavHost
 import com.lifelensiq.app.ui.theme.LifeLensIQTheme
 
@@ -40,10 +42,14 @@ class MainActivity : ComponentActivity() {
             android.util.Log.e("MainActivity", "Failed to start tracker service", e)
         }
 
-        SyncScheduler.schedule(this)
-        SyncScheduler.enqueue(this)
-        InsightScheduler.schedule(this)
-        com.lifelensiq.app.widget.LifeLensIQWidgetProvider.refresh(this)
+        try {
+            SyncScheduler.schedule(this)
+            SyncScheduler.enqueue(this)
+            InsightScheduler.schedule(this)
+            com.lifelensiq.app.widget.LifeLensIQWidgetProvider.refresh(this)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Scheduler/widget init failed", e)
+        }
 
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -54,7 +60,15 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             LifeLensIQTheme {
-                AppNavHost(initialRoute = intent.getStringExtra("route"))
+                val app = application as LifeLensIQApp
+                val crashLog = remember { LifeLensIQApp.readCrashLog(app) }
+                if (crashLog != null) {
+                    CrashReportScreen(logText = crashLog, onDismiss = {
+                        LifeLensIQApp.clearCrashLog(app)
+                    })
+                } else {
+                    AppNavHost(initialRoute = intent.getStringExtra("route"))
+                }
             }
         }
 

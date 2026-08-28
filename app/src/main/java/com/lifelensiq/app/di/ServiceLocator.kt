@@ -24,9 +24,19 @@ object ServiceLocator {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        // warm up singletons lazily
-        authRepository()
-        eventRepository()
+        // Warm up singletons, but never let a failure here crash the whole
+        // process (e.g. Firebase unavailable on the device). Local tracking
+        // must keep working regardless.
+        try {
+            eventRepository()
+        } catch (e: Throwable) {
+            android.util.Log.e("ServiceLocator", "eventRepository init failed", e)
+        }
+        try {
+            authRepository()
+        } catch (e: Throwable) {
+            android.util.Log.e("ServiceLocator", "authRepository init failed", e)
+        }
     }
 
     fun context(): Context {
