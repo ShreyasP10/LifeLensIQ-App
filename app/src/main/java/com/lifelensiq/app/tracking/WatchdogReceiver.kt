@@ -43,7 +43,9 @@ class WatchdogReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT
             }
             val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, flags)
-            alarmMgr.setExactAndAllowWhileIdle(
+            // Use setAndAllowWhileIdle (no SCHEDULE_EXACT_ALARM permission needed).
+            // Exact alarms require a permission on API 31+ and would throw there.
+            alarmMgr.setAndAllowWhileIdle(
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + CHECK_INTERVAL_MS,
                 pendingIntent

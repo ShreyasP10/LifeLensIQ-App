@@ -13,48 +13,59 @@ import kotlinx.coroutines.tasks.await
 
 class FirebaseAuthRepository(context: Context) : AuthRepository {
 
-    private val auth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth? = try {
+        FirebaseAuth.getInstance()
+    } catch (e: Throwable) {
+        android.util.Log.e("FirebaseAuthRepo", "FirebaseAuth unavailable", e)
+        null
+    }
     private val _state = MutableStateFlow<AuthState>(AuthState.Loading)
 
     init {
-        _state.value = auth.currentUser?.let { AuthState.LoggedIn(it.toProfile()) } ?: AuthState.LoggedOut
+        _state.value = auth?.currentUser?.let { AuthState.LoggedIn(it.toProfile()) } ?: AuthState.LoggedOut
         // Keep profile doc fresh on first login.
-        auth.currentUser?.let { ensureProfileDoc(it) }
+        auth?.currentUser?.let { ensureProfileDoc(it) }
     }
 
     override val state: StateFlow<AuthState> = _state
-    override val userId: String? get() = auth.currentUser?.uid
+    override val userId: String? get() = auth?.currentUser?.uid
 
     override suspend fun register(email: String, password: String): Result<Unit> = runCatching {
-        auth.createUserWithEmailAndPassword(email.trim(), password).await()
-        auth.currentUser?.let { ensureProfileDoc(it) }
-        _state.value = AuthState.LoggedIn(auth.currentUser!!.toProfile())
+        val a = auth ?: throw IllegalStateException("Authentication is unavailable on this device.")
+        a.createUserWithEmailAndPassword(email.trim(), password).await()
+        a.currentUser?.let { ensureProfileDoc(it) }
+        _state.value = AuthState.LoggedIn(a.currentUser!!.toProfile())
     }
 
     override suspend fun login(email: String, password: String): Result<Unit> = runCatching {
-        auth.signInWithEmailAndPassword(email.trim(), password).await()
-        auth.currentUser?.let { ensureProfileDoc(it) }
-        _state.value = AuthState.LoggedIn(auth.currentUser!!.toProfile())
+        val a = auth ?: throw IllegalStateException("Authentication is unavailable on this device.")
+        a.signInWithEmailAndPassword(email.trim(), password).await()
+        a.currentUser?.let { ensureProfileDoc(it) }
+        _state.value = AuthState.LoggedIn(a.currentUser!!.toProfile())
     }
 
     override suspend fun logout() {
-        auth.signOut()
+        auth?.signOut()
         _state.value = AuthState.LoggedOut
     }
 
     private fun FirebaseUser.toProfile() = UserProfile(uid, email, displayName)
 
     private fun ensureProfileDoc(user: FirebaseUser) {
-        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-        db.collection("users").document(user.uid).set(
-            mapOf(
-                "userId" to user.uid,
-                "email" to (user.email ?: ""),
-                "displayName" to (user.displayName ?: ""),
-                "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
-                "lastSeenAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+        try {
+            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            db.collection("users").document(user.uid).set(
+                mapOf(
+                    "userId" to user.uid,
+                    "email" to (user.email ?: ""),
+                    "displayName" to (user.displayName ?: ""),
+                    "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                    "lastSeenAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                )
             )
-        )
+        } catch (e: Throwable) {
+            android.util.Log.w("FirebaseAuthRepo", "ensureProfileDoc failed", e)
+        }
     }
 
     companion object {
