@@ -32,15 +32,22 @@ class SyncWorker(context: Context, params: WorkerParameters) :
         while (true) {
             val batch = repo.getUnsynced(MAX_BATCH)
             if (batch.isEmpty()) break
-            val result = repo.syncBatch(batch)
-            if (result.failed) {
-                return if (runAttemptCount < 3) {
-                    Result.retry()
-                } else {
-                    Result.failure(workDataOf("error" to (result.error ?: "sync failed")))
+            // Local-only events (sync status, tracking state) must never be
+            // uploaded to the cloud — just mark them synced locally so they
+            // aren't re-fetched every run (which would create a feedback loop).
+            val (localOnly, toUpload) = batch.partition { it.eventType in LOCAL_ONLY_TYPES }
+            if (localOnly.isNotEmpty()) repo.markSynced(localOnly.map { it.eventId })
+            if (toUpload.isNotEmpty()) {
+                val result = repo.syncBatch(toUpload)
+                if (result.failed) {
+                    return if (runAttemptCount < 3) {
+                        Result.retry()
+                    } else {
+                        Result.failure(workDataOf("error" to (result.error ?: "sync failed")))
+                    }
                 }
+                uploaded += result.uploaded
             }
-            uploaded += result.uploaded
             syncedInThisRun += batch.size
             if (batch.size < MAX_BATCH) break
         }
@@ -63,6 +70,12 @@ class SyncWorker(context: Context, params: WorkerParameters) :
         const val MAX_BATCH = 500
         const val WORK_NAME = "lifelensiq_sync"
         const val EVENTS_RETENTION_MS = 90L * 24 * 60 * 60 * 1000
+
+        /** Event types that are local-only metadata and must never be synced. */
+        val LOCAL_ONLY_TYPES = setOf(
+            com.lifelensiq.app.domain.EventType.SYNC_STATUS.id,
+            com.lifelensiq.app.domain.EventType.TRACKING_STATE.id
+        )
     }
 }
 

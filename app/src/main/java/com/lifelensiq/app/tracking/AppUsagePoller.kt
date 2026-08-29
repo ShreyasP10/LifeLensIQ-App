@@ -25,6 +25,7 @@ class AppUsagePoller(
     private var currentPackage: String? = null
     private var currentStart: Long = 0L
     private var wasGranted: Boolean = true
+    private var lastQueryTime: Long = 0L
 
     private val usm: UsageStatsManager
         get() = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
@@ -58,7 +59,16 @@ class AppUsagePoller(
     private fun pollIntervalMs(): Long =
         if (powerManager.isInteractive) POLL_INTERVAL_MS else IDLE_POLL_INTERVAL_MS
 
+    @Suppress("DEPRECATION")
     suspend fun pollOnce() {
+        val now = System.currentTimeMillis()
+        val from = lastQueryTime
+        // Always advance the query cursor so we never re-scan old events or
+        // leave gaps between polls (the previous fixed 16s window missed
+        // switches whenever pollOnce ran longer than 1s).
+        lastQueryTime = now
+        prefs.edit().putLong(KEY_LAST_QUERY, now).apply()
+
         if (!usageAccessGranted()) {
             closeCurrentIfIdle()
             if (wasGranted) {
@@ -76,7 +86,6 @@ class AppUsagePoller(
             Log.i(TAG, "Usage access granted")
             emitter.emit(EventType.TRACKING_STATE.id, mapOf("state" to "STARTED", "reason" to "PERMISSION_GRANTED"))
         }
-        val now = System.currentTimeMillis()
 
         // Screen off → the device is not in use, the current session is over.
         if (!powerManager.isInteractive) {
@@ -84,7 +93,7 @@ class AppUsagePoller(
             return
         }
 
-        val events = usm.queryEvents(now - POLL_INTERVAL_MS - 1000, now) ?: return
+        val events = usm.queryEvents(from, now) ?: return
         val e = UsageEvents.Event()
         var latestForeground: Pair<String, Long>? = null
         var currentBackgroundedAt: Long? = null
@@ -160,18 +169,20 @@ class AppUsagePoller(
 
     private suspend fun closeCurrent(now: Long) {
         val pkg = currentPackage ?: return
+        val startedAt = currentStart
         currentPackage = null
         currentStart = 0L
         clearState()
-        Log.d(TAG, "Closing session for $pkg, duration=${now - currentStart}ms")
+        val durationMs = (now - startedAt).coerceAtLeast(0L)
+        Log.d(TAG, "Closing session for $pkg, duration=${durationMs}ms")
         emitter.emit(
             EventType.APP_SESSION.id,
             mapOf(
                 "packageName" to pkg,
                 "appName" to appName(pkg),
-                "startedAt" to currentStart,
+                "startedAt" to startedAt,
                 "endedAt" to now,
-                "durationMs" to (now - currentStart)
+                "durationMs" to durationMs
             )
         )
     }
@@ -188,7 +199,7 @@ class AppUsagePoller(
             val app = pm.getApplicationInfo(pkg, 0)
             app.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0 &&
                 app.flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP == 0
-        }.getOrDefault(false)
+        }.getOrDefault(true)
     }
 
     private fun appName(pkg: String): String = runCatching {
@@ -207,7 +218,22 @@ class AppUsagePoller(
         currentPackage = prefs.getString("current_package", null)
         currentStart = prefs.getLong("current_start", 0L)
         if (currentPackage != null) {
-            Log.d(TAG, "Restored session: $currentPackage since $currentStart")
+            // If the session started a long time ago the process was very likely
+            // killed/rebooted, so the session already ended — drop it to avoid
+            // phantom (massively inflated) durations.
+            if (currentStart > 0 && System.currentTimeMillis() - currentStart > MAX_SESSION_GAP_MS) {
+                Log.w(TAG, "Dropping restored session (too old): $currentPackage since $currentStart")
+                clearState()
+                currentPackage = null
+                currentStart = 0L
+            } else {
+                Log.d(TAG, "Restored session: $currentPackage since $currentStart")
+            }
+        }
+        lastQueryTime = prefs.getLong(KEY_LAST_QUERY, 0L)
+        if (lastQueryTime == 0L) {
+            lastQueryTime = System.currentTimeMillis()
+            prefs.edit().putLong(KEY_LAST_QUERY, lastQueryTime).apply()
         }
     }
 
@@ -222,5 +248,7 @@ class AppUsagePoller(
         const val POLL_INTERVAL_MS = 15_000L
         const val IDLE_POLL_INTERVAL_MS = 60_000L
         const val BOOTSTRAP_WINDOW_MS = 3 * 60_000L
+        const val MAX_SESSION_GAP_MS = 6 * 60 * 60 * 1000L
+        const val KEY_LAST_QUERY = "last_query"
     }
 }

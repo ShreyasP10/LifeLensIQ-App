@@ -1,6 +1,7 @@
 package com.lifelensiq.app.tracking
 
 import android.accessibilityservice.AccessibilityService
+import android.os.Build
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.lifelensiq.app.di.ServiceLocator
@@ -73,7 +74,7 @@ class ShortsReelsDetector : AccessibilityService() {
                 lastCountedAt = now
             }
         } finally {
-            root.recycle()
+            // Do NOT recycle rootInActiveWindow — it is owned by the system.
         }
     }
 
@@ -83,6 +84,7 @@ class ShortsReelsDetector : AccessibilityService() {
         return findMarkerInTree(root, 0, { budget-- }, { budget > 0 })
     }
 
+    @Suppress("DEPRECATION")
     private fun findMarkerInTree(
         node: AccessibilityNodeInfo,
         depth: Int,
@@ -99,7 +101,12 @@ class ShortsReelsDetector : AccessibilityService() {
             try {
                 findMarkerInTree(child, depth + 1, consumeBudget, hasBudget)?.let { return it }
             } finally {
-                child.recycle()
+                // On API < 33 we own the child node from getChild() and must
+                // recycle it; on API 33+ the platform manages it automatically
+                // and recycle() is deprecated (a no-op).
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                    child.recycle()
+                }
             }
         }
         return null

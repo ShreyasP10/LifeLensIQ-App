@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.SetOptions
 import com.lifelensiq.app.domain.repository.AuthRepository
 import com.lifelensiq.app.domain.repository.AuthState
 import com.lifelensiq.app.domain.repository.UserProfile
@@ -25,6 +26,13 @@ class FirebaseAuthRepository(context: Context) : AuthRepository {
         _state.value = auth?.currentUser?.let { AuthState.LoggedIn(it.toProfile()) } ?: AuthState.LoggedOut
         // Keep profile doc fresh on first login.
         auth?.currentUser?.let { ensureProfileDoc(it) }
+        // React to external auth changes (password reset, revoke, token refresh)
+        // so the UI never shows a stale auth state.
+        auth?.addAuthStateListener { fbAuth ->
+            val user = fbAuth.currentUser
+            _state.value = user?.let { AuthState.LoggedIn(it.toProfile()) } ?: AuthState.LoggedOut
+            user?.let { ensureProfileDoc(it) }
+        }
     }
 
     override val state: StateFlow<AuthState> = _state
@@ -54,6 +62,7 @@ class FirebaseAuthRepository(context: Context) : AuthRepository {
     private fun ensureProfileDoc(user: FirebaseUser) {
         try {
             val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            // Merge so we don't overwrite fields like createdAt on every login.
             db.collection("users").document(user.uid).set(
                 mapOf(
                     "userId" to user.uid,
@@ -61,7 +70,8 @@ class FirebaseAuthRepository(context: Context) : AuthRepository {
                     "displayName" to (user.displayName ?: ""),
                     "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
                     "lastSeenAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-                )
+                ),
+                SetOptions.merge()
             )
         } catch (e: Throwable) {
             android.util.Log.w("FirebaseAuthRepo", "ensureProfileDoc failed", e)

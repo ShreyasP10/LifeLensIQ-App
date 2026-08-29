@@ -39,14 +39,17 @@ class FirestoreEventSource {
                 val ts = event.timestamp
                 val durationMs = payload["durationMs"]?.let { asLong(it) } ?: 0L
                 val durationSeconds = payload["durationSeconds"]?.let { asLong(it) } ?: (durationMs / 1000)
-                val endTs = ts + durationSeconds * 1000
+                // Guard against a garbage/overflowing duration (Long multiply).
+                val safeDurationMs = (durationSeconds.coerceIn(0L, 60L * 60 * 1000 * 24 * 7) * 1000)
+                    .coerceAtLeast(0L)
+                val endTs = ts + safeDurationMs
                 val pkg = payload["packageName"] as? String
                 val doc = db.collection("users").document(userId)
                     .collection("events").document(event.eventId)
                 batch.set(doc, mapOf(
                     "id" to event.eventId,
                     "eventId" to event.eventId,
-                    "userId" to event.userId,
+                    "userId" to userId,
                     "deviceId" to event.deviceId,
                     "device" to "android",
                     "ts" to ts,
@@ -69,22 +72,25 @@ class FirestoreEventSource {
     }
 
     /**
-     * Fetch every event doc for a user (chunked by document id), including
-     * events written by the web dashboard. Returns raw cloud maps.
+     * Fetch event docs for a user (chunked), including events written by the
+     * web dashboard. Returns raw cloud maps. When [sinceTs] > 0 only events
+     * at/after that timestamp are pulled, so we don't re-download the entire
+     * history every sync (which would defeat local pruning).
      */
-    suspend fun fetchAllEvents(userId: String): List<Map<String, Any?>> {
+    suspend fun fetchAllEvents(userId: String, sinceTs: Long = 0L): List<Map<String, Any?>> {
         val out = mutableListOf<Map<String, Any?>>()
-        var lastId: String? = null
+        var lastTs: Long? = null
         while (true) {
             var query = db.collection("users").document(userId)
                 .collection("events")
-                .orderBy(FieldPath.documentId())
+                .orderBy("ts")
                 .limit(FETCH_CHUNK_SIZE)
-            if (lastId != null) query = query.startAfter(lastId)
+            if (sinceTs > 0) query = query.whereGreaterThanOrEqualTo("ts", sinceTs)
+            if (lastTs != null) query = query.startAfter(lastTs)
             val docs = query.get().await()
             if (docs.documents.isEmpty()) break
             docs.documents.forEach { out.add(it.data ?: emptyMap()) }
-            lastId = docs.documents.last().id
+            lastTs = docs.documents.last().getLong("ts")
             if (docs.documents.size < FETCH_CHUNK_SIZE) break
         }
         return out

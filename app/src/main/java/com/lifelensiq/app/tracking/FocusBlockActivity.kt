@@ -41,6 +41,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -50,6 +51,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 class FocusBlockActivity : ComponentActivity() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    // Separate scope for persisting the session so it isn't cancelled when
+    // the activity is torn down (onDestroy cancels `scope`).
+    private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,7 +65,6 @@ class FocusBlockActivity : ComponentActivity() {
                 onResume = { finish() },
                 onEndFocus = {
                     endFocusAndWriteSession()
-                    finish()
                 }
             )
         }
@@ -77,6 +80,7 @@ class FocusBlockActivity : ComponentActivity() {
     override fun onDestroy() {
         isShowing.set(false)
         scope.cancel()
+        writeScope.cancel()
         super.onDestroy()
     }
 
@@ -86,17 +90,21 @@ class FocusBlockActivity : ComponentActivity() {
         val now = System.currentTimeMillis()
         val subject = SettingsStore.focusSubject.ifBlank { "Focus session" }
         SettingsStore.focusActive = false
-        scope.launch {
-            ServiceLocator.eventEmitter().emit(
-                EventType.STUDY_SESSION.id,
-                mapOf(
-                    "subject" to subject,
-                    "startedAt" to start,
-                    "endedAt" to now,
-                    "durationMs" to (now - start),
-                    "locationType" to "FOCUS"
+        writeScope.launch {
+            try {
+                ServiceLocator.eventEmitter().emit(
+                    EventType.STUDY_SESSION.id,
+                    mapOf(
+                        "subject" to subject,
+                        "startedAt" to start,
+                        "endedAt" to now,
+                        "durationMs" to (now - start),
+                        "locationType" to "FOCUS"
+                    )
                 )
-            )
+            } finally {
+                withContext(Dispatchers.Main) { finish() }
+            }
         }
     }
 

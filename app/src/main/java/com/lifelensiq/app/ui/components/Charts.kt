@@ -70,10 +70,13 @@ fun WeeklyBarChart(
             val chartHeight = size.height - 16.dp.toPx()
             val dayWidth = size.width / 7f
             val barWidth = dayWidth * 0.28f
-            val maxValue = max(1L, studyMinutes.maxOrNull() ?: 0L).coerceAtLeast(1L)
+            // Each series is scaled to its own max so screen time (usually
+            // larger than productive time) isn't pinned to full height.
+            val studyMax = (studyMinutes.maxOrNull() ?: 0L).coerceAtLeast(1L)
+            val screenMax = (screenMinutes.maxOrNull() ?: 0L).coerceAtLeast(1L)
 
             studyMinutes.forEachIndexed { i, minutes ->
-                val ratio = (minutes.toFloat() / maxValue).coerceIn(0.03f, 1f)
+                val ratio = (minutes.toFloat() / studyMax).coerceIn(0.03f, 1f)
                 val x = i * dayWidth + dayWidth * 0.14f
                 val h = chartHeight * ratio
                 drawRoundRect(
@@ -84,7 +87,7 @@ fun WeeklyBarChart(
                 )
             }
             screenMinutes.forEachIndexed { i, minutes ->
-                val ratio = (minutes.toFloat() / maxValue).coerceIn(0.03f, 1f)
+                val ratio = (minutes.toFloat() / screenMax).coerceIn(0.03f, 1f)
                 val x = i * dayWidth + dayWidth * 0.54f
                 val h = chartHeight * ratio
                 drawRoundRect(
@@ -239,11 +242,11 @@ fun DonutChart(
                 val inset = stroke / 2
                 var start = -90f
                 slices.forEachIndexed { i, slice ->
-                    val sweep = 360f * slice.second / total
+                    val sweep = (360f * slice.second / total).coerceAtLeast(0f)
                     drawArc(
                         color = colors[i],
                         startAngle = start,
-                        sweepAngle = sweep - 1.5f,
+                        sweepAngle = (sweep - 1.5f).coerceAtLeast(0f),
                         useCenter = false,
                         style = Stroke(stroke, cap = StrokeCap.Butt),
                         topLeft = Offset(inset, inset),

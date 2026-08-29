@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 class StepTracker(context: Context) {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private val prefs = context.getSharedPreferences("lifelensiq_steps", Context.MODE_PRIVATE)
     private val sensor: Sensor? =
         sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
             ?: sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
@@ -54,15 +55,30 @@ class StepTracker(context: Context) {
                     lastCumulative += 1
                 } else {
                     val cumulative = event.values[0].toInt()
-                    // Handle sensor reset (e.g., after reboot)
+                    // Handle sensor reset (e.g., after reboot): re-baseline,
+                    // don't count the jump as steps.
                     if (cumulative < lastSteps) {
                         lastSteps = cumulative
+                        lastCumulative = cumulative
+                        persistCumulative(cumulative)
+                        return
+                    }
+                    // First reading after (re)start. Use the persisted
+                    // cumulative (if valid and no reboot since) as the baseline
+                    // so steps accrued while the tracker was down are still
+                    // counted instead of silently dropped.
+                    if (lastSteps == 0) {
+                        val persisted = prefs.getInt(KEY_LAST_CUMULATIVE, 0)
+                        lastSteps = if (persisted in 1..cumulative) persisted else cumulative
+                        lastCumulative = lastSteps
+                        persistCumulative(lastSteps)
                         return
                     }
                     val delta = (cumulative - lastSteps).coerceAtLeast(0)
-                    if (lastSteps > 0 && delta > 0) {
+                    if (delta > 0) {
                         pendingDelta += delta
                         lastCumulative = cumulative
+                        persistCumulative(cumulative)
                     }
                     lastSteps = cumulative
                 }
@@ -119,5 +135,10 @@ class StepTracker(context: Context) {
 
     companion object {
         const val FLUSH_INTERVAL_MS = 10 * 60 * 1000L
+        const val KEY_LAST_CUMULATIVE = "last_cumulative"
+    }
+
+    private fun persistCumulative(value: Int) {
+        prefs.edit().putInt(KEY_LAST_CUMULATIVE, value).apply()
     }
 }

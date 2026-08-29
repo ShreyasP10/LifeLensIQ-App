@@ -44,4 +44,7 @@ interface EventDao {
 
     @Query("DELETE FROM events")
     suspend fun deleteAll(): Int
+
+    @Query("SELECT eventId FROM events WHERE eventId IN (:ids)")
+    suspend fun getExistingIds(ids: List<String>): List<String>
 }

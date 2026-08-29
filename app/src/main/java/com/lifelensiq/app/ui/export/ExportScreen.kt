@@ -37,6 +37,9 @@ import com.lifelensiq.app.export.ExportFormat
 fun ExportScreen(vm: ExportViewModel) {
     val state by vm.uiState.collectAsState()
 
+    // The contract instance is recreated on each recomposition, so when the
+    // chosen format changes the ActivityResultContract changes and the launcher
+    // re-registers with the correct MIME type automatically.
     val createDocument = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(state.format.mimeType)
     ) { uri: Uri? ->

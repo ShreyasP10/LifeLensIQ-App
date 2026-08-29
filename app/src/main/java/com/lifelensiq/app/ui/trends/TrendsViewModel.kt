@@ -81,8 +81,13 @@ class TrendsViewModel(
             else -> 0L
         }
 
-        val screenMin = inPeriod.filter { it.eventType == EventType.APP_SESSION.id }
-            .sumOf { durationMs(it) } / 60_000
+        // Screen time = all on-screen activities (app usage, shorts/reels,
+        // and study sessions), consistent with Home's screen-time total.
+        val screenMin = inPeriod.filter {
+            it.eventType == EventType.APP_SESSION.id ||
+                it.eventType == EventType.SHORT_VIDEO.id ||
+                it.eventType == EventType.STUDY_SESSION.id
+        }.sumOf { durationMs(it) } / 60_000
         val productiveMin = inPeriod.sumOf { productiveOf(it) } / 60_000
         val steps = inPeriod.filter { it.eventType == EventType.STEPS.id }
             .sumOf { payloadLong(it, "stepDelta") }
@@ -195,11 +200,18 @@ class TrendsViewModel(
     private fun chargingStats(): ChargingStats {
         val from = System.currentTimeMillis() - 7L * 86_400_000
         val starts = cached.filter { it.eventType == EventType.CHARGE_START.id && it.timestamp >= from }
+            .sortedBy { it.timestamp }
+        // Match each start to the first end at/after it, consuming each end
+        // only once so a single CHARGE_END can't be counted by two starts.
+        val availableEnds = cached.filter { it.eventType == EventType.CHARGE_END.id && it.timestamp >= from }
+            .map { it.timestamp }.sorted().toMutableList()
         val durations = starts.mapNotNull { start ->
-            cached.filter { it.eventType == EventType.CHARGE_END.id && it.timestamp >= start.timestamp }
-                .minByOrNull { it.timestamp }
-                ?.timestamp?.minus(start.timestamp)
-                ?.takeIf { it in 5 * 60_000L..24 * 3600_000L }
+            val idx = availableEnds.indexOfFirst { it >= start.timestamp }
+            if (idx < 0) null
+            else {
+                val endTs = availableEnds.removeAt(idx)
+                (endTs - start.timestamp).takeIf { it in 5 * 60_000L..24 * 3600_000L }
+            }
         }
         val overnight = starts.count { start ->
             val hour = Instant.ofEpochMilli(start.timestamp).atZone(ZoneId.systemDefault()).hour

@@ -43,7 +43,7 @@ class EventRepositoryImpl(
     override suspend fun syncBatch(events: List<EventEntity>): SyncResult {
         if (events.isEmpty()) return SyncResult(0)
         return try {
-            val userId = auth.userId ?: return SyncResult(0, failed = true, error = "Not logged in")
+            val userId = auth.userId ?: return SyncResult(0)
             val uploaded = remote.uploadBatch(userId, events)
             eventDao.markSynced(events.map { it.eventId })
             syncLogDao.insert(SyncLogEntity(syncedAt = System.currentTimeMillis(), batchSize = uploaded, success = true))
@@ -58,6 +58,10 @@ class EventRepositoryImpl(
 
     override fun observeEvents(from: Long, to: Long): Flow<List<EventEntity>> =
         eventDao.observeBetween(from, to)
+
+    override suspend fun markSynced(ids: List<String>) {
+        if (ids.isNotEmpty()) eventDao.markSynced(ids)
+    }
 
     override suspend fun eventsBetween(from: Long, to: Long): List<EventEntity> =
         eventDao.getBetween(from, to)
@@ -74,13 +78,22 @@ class EventRepositoryImpl(
         remote.deleteAllUserData(uid)
     }
 
-    override suspend fun downloadCloud(): Int {
+    override suspend fun downloadCloud(retentionMs: Long): Int {
         val uid = auth.userId ?: return 0
         return try {
-            val docs = remote.fetchAllEvents(uid)
-            val entities = docs.mapNotNull { it.toEventEntity() }
-            if (entities.isNotEmpty()) eventDao.insertAll(entities)
-            entities.size
+            val sinceTs = if (retentionMs > 0) System.currentTimeMillis() - retentionMs else 0L
+            val docs = remote.fetchAllEvents(uid, sinceTs)
+            if (docs.isEmpty()) return 0
+            val entities = docs.mapNotNull { it.toEventEntity()?.copy(userId = uid) }
+            if (entities.isEmpty()) return 0
+            // Only insert events we don't already have locally (dedup by
+            // eventId). This preserves un-synced local events and stops the
+            // whole history from being re-inserted every sync (which would
+            // defeat pruning and grow the local DB unboundedly).
+            val existing = eventDao.getExistingIds(entities.map { it.eventId }).toSet()
+            val newOnes = entities.filter { it.eventId !in existing }
+            if (newOnes.isNotEmpty()) eventDao.insertAll(newOnes)
+            newOnes.size
         } catch (t: Throwable) {
             // Uploads already succeeded; a failed pull must not fail the run —
             // but log it so Settings shows why website data is missing.

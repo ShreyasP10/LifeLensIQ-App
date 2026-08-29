@@ -26,13 +26,16 @@ class CategoryDetailViewModel(
     private val category: String
 ) : ViewModel() {
 
-    private val todayStart = TimeUtils.todayEpochStart()
     private val _uiState = MutableStateFlow(CategoryDetailState())
     val uiState: StateFlow<CategoryDetailState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            events.observeEvents(todayStart, Long.MAX_VALUE).collect { list ->
+            // Recompute the day boundary on every emission so "today" stays
+            // correct even if the screen is left open past 02:00.
+            events.observeEvents(TimeUtils.todayEpochStart(), Long.MAX_VALUE).collect { all ->
+                val todayStart = TimeUtils.todayEpochStart()
+                val list = all.filter { it.timestamp >= todayStart }
                 val filtered = list.filter { event -> categoryOf(event) == category }
                 val apps = filtered.map { event -> itemFor(event) }
                     .filterNotNull()

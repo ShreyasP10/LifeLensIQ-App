@@ -2,6 +2,7 @@ package com.lifelensiq.app.ui.settings
 
 import android.app.usage.UsageStatsManager
 import android.content.ActivityNotFoundException
+import android.os.Build
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -65,13 +66,17 @@ class SettingsViewModel(
     }
 
     fun revokeNotifications(context: Context) {
-        context.revokeSelfPermissionOnKill(android.Manifest.permission.POST_NOTIFICATIONS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            context.revokeSelfPermissionOnKill(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
         refreshNotifications()
         _uiState.update { it.copy(message = "Notification permission revoked. Grant it again anytime from this screen.") }
     }
 
     fun revokeStepsPermission(context: Context) {
-        context.revokeSelfPermissionOnKill(android.Manifest.permission.ACTIVITY_RECOGNITION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            context.revokeSelfPermissionOnKill(android.Manifest.permission.ACTIVITY_RECOGNITION)
+        }
         refreshStepsPermission()
         _uiState.update { it.copy(message = "Activity-recognition (steps) permission revoked.") }
     }

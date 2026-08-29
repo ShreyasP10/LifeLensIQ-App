@@ -25,10 +25,13 @@ object MorningReporter {
 
         val repo = ServiceLocator.eventRepository()
         val todayStart = TimeUtils.todayEpochStart()
-        val yesterdayStart = todayStart - 86_400_000L
+        // Use the real previous 02:00 boundary (handles DST) and query up to
+        // (todayStart - 1) so the inclusive BETWEEN window doesn't overlap the
+        // next day's report and double-count an event sitting exactly on 02:00.
+        val yesterdayStart = TimeUtils.dayStartFor(todayStart - 86_400_000L)
         val deviceId = com.lifelensiq.app.util.DeviceIdProvider.get(ServiceLocator.context())
         val overrides = SettingsStore.categoryOverrides()
-        val yesterday = repo.eventsBetween(yesterdayStart, todayStart)
+        val yesterday = repo.eventsBetween(yesterdayStart, todayStart - 1)
             .filter { it.deviceId == deviceId }
 
         fun productiveOf(e: EventEntity): Long = when (e.eventType) {

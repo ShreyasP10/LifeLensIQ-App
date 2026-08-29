@@ -86,7 +86,8 @@ class HomeViewModel(
                 }
 
                 fun isSession(e: EventEntity): Boolean {
-                    if (e.deviceId != deviceId && e.deviceId.isNotBlank()) return true
+                    // Only this device's app/web sessions count.
+                    if (e.deviceId.isNotBlank() && e.deviceId != deviceId) return false
                     return e.eventType == EventType.APP_SESSION.id ||
                             e.eventType == EventType.SHORT_VIDEO.id ||
                             e.eventType == EventType.STUDY_SESSION.id
@@ -124,9 +125,10 @@ class HomeViewModel(
 
                 val bestIndex = weeklyProductive.withIndex().maxByOrNull { it.value }?.takeIf { it.value > 0 }
                 val bestDay = bestIndex?.let {
-                    LocalDate.now().minusDays((6 - it.index).toLong()).let { d ->
-                        "${dayLabel(d)} · ${formatMinutes(it.value)}"
-                    }
+                    val dayTs = todayStart - (6 - it.index).toLong() * 86_400_000L
+                    val d = java.time.Instant.ofEpochMilli(dayTs)
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                    "${dayLabel(d)} · ${formatMinutes(it.value)}"
                 }
 
                 // Wake & sleep (day = 02:00-02:00):

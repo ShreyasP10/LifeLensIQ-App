@@ -18,6 +18,9 @@ interface EventRepository {
     /** Upload a batch to Firestore; on success marks them synced locally. */
     suspend fun syncBatch(events: List<EventEntity>): SyncResult
 
+    /** Mark events as synced locally without uploading (local-only events). */
+    suspend fun markSynced(ids: List<String>)
+
     fun observePendingCount(): Flow<Int>
     fun observeEvents(from: Long, to: Long): Flow<List<EventEntity>>
     suspend fun eventsBetween(from: Long, to: Long): List<EventEntity>
@@ -25,8 +28,10 @@ interface EventRepository {
     suspend fun deleteAllLocal()
     suspend fun deleteAllCloud()
 
-    /** Pull all cloud events (app + web dashboard) into Room. Returns merged count. */
-    suspend fun downloadCloud(): Int
+    /** Pull cloud events (app + web dashboard) into Room. Returns count of
+     *  newly-inserted events (existing ones are not re-inserted). When
+     *  [retentionMs] > 0 only events within that window are pulled. */
+    suspend fun downloadCloud(retentionMs: Long = 90L * 24 * 60 * 60 * 1000): Int
 
     /** Delete synced events and sync-log rows older than [retentionMs]. */
     suspend fun prune(retentionMs: Long)

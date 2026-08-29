@@ -15,9 +15,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -43,6 +42,24 @@ fun WebsiteScreen(vm: WebsiteViewModel) {
     val state by vm.uiState.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
+        ScrollableTabRow(
+            selectedTabIndex = WebsiteSection.entries.indexOf(state.section),
+            edgePadding = 16.dp
+        ) {
+            WebsiteSection.entries.forEach { section ->
+                Tab(
+                    selected = state.section == section,
+                    onClick = { vm.setSection(section) },
+                    text = {
+                        Text(
+                            section.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (state.section == section) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
+                )
+            }
+        }
         LazyColumn(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(16.dp),
@@ -77,14 +94,14 @@ fun WebsiteScreen(vm: WebsiteViewModel) {
                 WebsiteSection.OVERVIEW -> {
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Stat("Screen Time", formatDuration(state.screenMinutes * 60_000), CategoryColors.SHORT_FORM, Modifier.weight(1f))
-                            Stat("Productive", formatDuration(state.productiveMinutes * 60_000), CategoryColors.PRODUCTIVITY, Modifier.weight(1f))
+                            Stat("Screen Time", formatDuration(state.screenMinutes), CategoryColors.SHORT_FORM, Modifier.weight(1f))
+                            Stat("Productive", formatDuration(state.productiveMinutes), CategoryColors.PRODUCTIVITY, Modifier.weight(1f))
                         }
                     }
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Stat("Shorts/Reels", state.shortsViews.toString(), CategoryColors.TIMEPASS, Modifier.weight(1f))
-                            Stat("Study logged", formatDuration(state.studySessions * 60_000), CategoryColors.STUDY, Modifier.weight(1f))
+                            Stat("Study logged", formatDuration(state.studySessions), CategoryColors.STUDY, Modifier.weight(1f))
                         }
                     }
                     item {
@@ -111,7 +128,7 @@ fun WebsiteScreen(vm: WebsiteViewModel) {
                                 Column(Modifier.weight(1f)) {
                                     Text(category, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                                     Text(
-                                        formatDuration(minutes * 60_000),
+                                        formatDuration(minutes),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -155,7 +172,7 @@ fun WebsiteScreen(vm: WebsiteViewModel) {
                                             )
                                         }
                                         Text(
-                                            formatDuration(item.minutes * 60_000),
+                                            formatDuration(item.minutes),
                                             style = MaterialTheme.typography.labelMedium,
                                             color = CategoryColors.forCategory(item.category)
                                         )
@@ -172,30 +189,6 @@ fun WebsiteScreen(vm: WebsiteViewModel) {
                         }
                     }
                 }
-            }
-        }
-
-        // Website section's own bottom navigation bar.
-        NavigationBar(
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp
-        ) {
-            WebsiteSection.entries.forEach { section ->
-                NavigationBarItem(
-                    selected = state.section == section,
-                    onClick = { vm.setSection(section) },
-                    icon = { Text(if (state.section == section) "●" else "○", style = MaterialTheme.typography.bodyMedium) },
-                    label = {
-                        Text(
-                            section.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (state.section == section) FontWeight.Bold else FontWeight.Medium
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-                    )
-                )
             }
         }
     }
